@@ -1,0 +1,23 @@
+7. Natural Language Query Interface
+What it does:
+
+HR/Admin can ask questions in plain English instead of building reports
+"Show me engineers who are behind on technical skill goals"
+"Which teams have the highest Q2 achievement rates?"
+Generates ad-hoc insights without pre-built dashboards
+
+
+Teams bot
+
+
+5. Automated Achievement Data Collection
+What it does:
+
+Integrates with existing tools (Jira, Salesforce, GitHub, analytics dashboards)
+Pre-fills "Actual Achievement" based on live data
+Employee just reviews and confirms rather than manual entry
+Reduces data entry errors and saves time
+
+Schema update process
+npx drizzle-kit generate
+supabase db push
