@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { API_URL } from '../../lib/userApi'
 
 export default function Reports() {
   const [loading, setLoading] = useState(false)
@@ -14,7 +15,7 @@ export default function Reports() {
   async function loadReports() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('http://localhost:3001/api/reports/list', {
+      const res = await fetch(`${API_URL}/api/reports/list`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
@@ -34,7 +35,7 @@ export default function Reports() {
       const { data: { session } } = await supabase.auth.getSession()
       
       const qParam = quarter ? `?quarter=${quarter}` : ''
-      const res = await fetch(`http://localhost:3001/api/reports/achievement${qParam}`, {
+      const res = await fetch(`${API_URL}/api/reports/achievement${qParam}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
@@ -62,7 +63,7 @@ export default function Reports() {
   async function downloadReport(fileName) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`http://localhost:3001/api/reports/download/${encodeURIComponent(fileName)}`, {
+      const res = await fetch(`${API_URL}/api/reports/download/${encodeURIComponent(fileName)}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }

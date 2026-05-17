@@ -1,5 +1,7 @@
 import { supabase } from './supabase'
 
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
 // Helper to get current user's DB profile ID
 export async function getMyProfile() {
   const { data: { user } } = await supabase.auth.getUser()
@@ -301,7 +303,7 @@ export async function logEvent({ action, goalId = null, goalSheetId = null, fiel
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
 
-    await fetch('http://localhost:3001/api/events/log', {
+    await fetch(`${API_URL}/api/events/log`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

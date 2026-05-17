@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import AdminLayout from '../../layouts/AdminLayout'
 import { getAuditLog } from '../../lib/adminApi'
 import { supabase } from '../../lib/supabase'
+import { API_URL } from '../../lib/userApi'
 
 export default function AuditLog() {
   const [activeTab, setActiveTab] = useState('audit')
@@ -42,7 +43,7 @@ export default function AuditLog() {
 
   async function checkDiagnostics() {
     try {
-      const res = await fetch('http://localhost:3001/api/reports/list', {
+      const res = await fetch(`${API_URL}/api/reports/list`, {
         headers: {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
         }
@@ -60,7 +61,7 @@ export default function AuditLog() {
   async function handleTriggerCron() {
     setTriggeringCron(true)
     try {
-      const res = await fetch('http://localhost:3001/api/cron/trigger', {
+      const res = await fetch(`${API_URL}/api/cron/trigger`, {
         method: 'POST'
       })
       if (res.ok) {
@@ -83,7 +84,7 @@ export default function AuditLog() {
 
       const { data: me } = await supabase.from('users').select('id').eq('auth_id', user.id).single()
       
-      const res = await fetch('http://localhost:3001/api/events/log', {
+      const res = await fetch(`${API_URL}/api/events/log`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

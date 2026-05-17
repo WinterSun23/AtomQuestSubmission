@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import AdminLayout from '../../layouts/AdminLayout'
 import { getCycles, createCycle, activateCycle, getAllSettings, updateSetting } from '../../lib/adminApi'
 import { supabase } from '../../lib/supabase'
+import { API_URL } from '../../lib/userApi'
 
 export default function ManageCycles() {
   const [cycles,  setCycles]  = useState([])
@@ -60,7 +61,7 @@ export default function ManageCycles() {
       const { data: { session } } = await supabase.auth.getSession()
       
       const qParam = reportQuarter ? `?quarter=${reportQuarter}` : ''
-      const res = await fetch(`http://localhost:3001/api/reports/achievement${qParam}`, {
+      const res = await fetch(`${API_URL}/api/reports/achievement${qParam}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
       
