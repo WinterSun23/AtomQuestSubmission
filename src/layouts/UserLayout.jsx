@@ -78,46 +78,30 @@ export default function UserLayout({ children }) {
   // Navigation structure based on role
   const NAV = []
 
-  const override = settings?.['active_quarter_override']
-  const auto = settings?.['auto_active_quarter']
-  const currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
-  const isPhase1 = currentQ === 'phase1'
-
   if (me?.role === 'employee') {
-    const employeeItems = [
-      { id: 'goals',       label: 'My Goals',         icon: '🎯', path: '/dashboard/my-goals' }
-    ]
-    if (!isPhase1) {
-      employeeItems.push({ id: 'checkins',    label: 'My Check-ins',     icon: '📝', path: '/dashboard/my-checkins' })
-    }
-    employeeItems.push({ id: 'preferences', label: 'Preferences',      icon: '⚙️', path: '/dashboard/preferences' })
-
     NAV.push({
       section: 'My Portal',
-      items: employeeItems,
+      items: [
+        { id: 'goals',       label: 'My Goals',         icon: '🎯', path: '/dashboard/my-goals' },
+        { id: 'checkins',    label: 'My Check-ins',     icon: '📝', path: '/dashboard/my-checkins' },
+        { id: 'preferences', label: 'Preferences',      icon: '⚙️', path: '/dashboard/preferences' },
+      ],
     })
   }
 
   if (me?.role === 'manager') {
-    const managerItems = [
-      { id: 'goals',       label: 'My Goals',         icon: '🎯', path: '/dashboard/my-goals' }
-    ]
-    if (!isPhase1) {
-      managerItems.push({ id: 'checkins',    label: 'My Check-ins',     icon: '📝', path: '/dashboard/my-checkins' })
-    }
-    managerItems.push({ id: 'preferences', label: 'Preferences',      icon: '⚙️', path: '/dashboard/preferences' })
-
     NAV.push({
       section: 'My Portal',
-      items: managerItems,
+      items: [
+        { id: 'preferences', label: 'Preferences',      icon: '⚙️', path: '/dashboard/preferences' },
+      ],
     })
 
     NAV.push({
       section: 'Team Portal',
       items: [
         { id: 'overview',      label: 'Team Overview',  icon: '📊', path: '/dashboard/overview' },
-        { id: 'team-goals',    label: 'Team Goals',     icon: '🎯', path: '/dashboard/team-goals' },
-        { id: 'team-checkins', label: 'Team Check-ins', icon: '📝', path: '/dashboard/team-checkins' },
+        { id: 'team-goals',    label: 'Team Goals & Check-ins', icon: '🎯', path: '/dashboard/team-goals' },
         { id: 'team-escalations', label: 'Team Escalations', icon: '🚨', path: '/dashboard/team-escalations' },
         { id: 'reports',       label: 'Reports',        icon: '📋', path: '/dashboard/reports' },
       ]

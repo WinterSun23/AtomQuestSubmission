@@ -165,21 +165,7 @@ export default function MyCheckins() {
   if (loading) return <div className="user-empty">Loading...</div>
   if (!cycle) return <div className="user-empty">No active performance cycle found.</div>
 
-  const override = settings?.['active_quarter_override']
-  const auto = settings?.['auto_active_quarter']
-  const currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
-  
-  if (currentQ === 'phase1') {
-    return (
-      <div className="user-card" style={{ textAlign: 'center', padding: '3.5rem 1rem' }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🎯</div>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827', margin: 0 }}>Goal Setting Phase Active (Phase 1)</h3>
-        <p style={{ color: '#6b7280', maxWidth: '480px', margin: '0.75rem auto 0 auto', fontSize: '0.88rem', lineHeight: 1.5 }}>
-          Progress check-ins are not available during the initial Goal Setting window. Once Phase 1 completes and your goal sheet is locked, quarterly check-in windows will open!
-        </p>
-      </div>
-    )
-  }
+
 
   if (!sheetStatus || sheetStatus !== 'approved') {
     return (
@@ -191,7 +177,6 @@ export default function MyCheckins() {
       </div>
     )
   }
-  if (!window) return <div className="user-empty">No active check-in window at this time. Check-ins open later in the quarter.</div>
   if (goals.length === 0) return <div className="user-empty">You have no goals to track.</div>
 
   const activeInput = selectedGoal ? (checkins[selectedGoal.id] || { actual_achievement: '', actual_date: '', status: 'not_started' }) : {}
@@ -346,7 +331,7 @@ export default function MyCheckins() {
       <div className="user-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="user-page-title">My Check-ins</h1>
-          <p className="user-page-subtitle">{window.quarter} Window (Closes {window.window_close})</p>
+          <p className="user-page-subtitle">{window ? `${window.quarter} Window (Closes ${window.window_close})` : 'No active check-in window at this time'}</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
           <span className="badge badge-submitted" style={{ fontSize: '0.88rem', padding: '0.4rem 0.8rem', fontWeight: 700 }}>
@@ -494,75 +479,81 @@ export default function MyCheckins() {
               )}
             </div>
 
-            <div className="drawer-footer">
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', color: '#1f2937' }}>
-                ✏️ Log New Progress Update
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '0.25rem' }}>
-                    Actual Achievement Progress
-                  </label>
-                  {selectedGoal.uom_type === 'timeline' ? (
-                    <input 
-                      type="date" 
-                      className="user-input"
-                      style={{ width: '100%' }}
-                      value={activeInput.actual_date || ''}
-                      onChange={e => handleChange(selectedGoal.id, 'actual_date', e.target.value)}
-                    />
-                  ) : (
-                    <input 
-                      type="number" 
-                      className="user-input"
-                      style={{ width: '100%' }}
-                      placeholder="Enter latest achievement..."
-                      value={activeInput.actual_achievement || ''}
-                      onChange={e => handleChange(selectedGoal.id, 'actual_achievement', e.target.value)}
-                    />
-                  )}
-                </div>
+            {window ? (
+              <div className="drawer-footer">
+                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', color: '#1f2937' }}>
+                  ✏️ Log New Progress Update
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '0.25rem' }}>
+                      Actual Achievement Progress
+                    </label>
+                    {selectedGoal.uom_type === 'timeline' ? (
+                      <input 
+                        type="date" 
+                        className="user-input"
+                        style={{ width: '100%' }}
+                        value={activeInput.actual_date || ''}
+                        onChange={e => handleChange(selectedGoal.id, 'actual_date', e.target.value)}
+                      />
+                    ) : (
+                      <input 
+                        type="number" 
+                        className="user-input"
+                        style={{ width: '100%' }}
+                        placeholder="Enter latest achievement..."
+                        value={activeInput.actual_achievement || ''}
+                        onChange={e => handleChange(selectedGoal.id, 'actual_achievement', e.target.value)}
+                      />
+                    )}
+                  </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '0.25rem' }}>
-                    Status Category
-                  </label>
-                  <select 
-                    className="user-select"
-                    style={{ width: '100%' }}
-                    value={activeInput.status || 'not_started'}
-                    onChange={e => handleChange(selectedGoal.id, 'status', e.target.value)}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4b5563', marginBottom: '0.25rem' }}>
+                      Status Category
+                    </label>
+                    <select 
+                      className="user-select"
+                      style={{ width: '100%' }}
+                      value={activeInput.status || 'not_started'}
+                      onChange={e => handleChange(selectedGoal.id, 'status', e.target.value)}
+                    >
+                      <option value="not_started">Not Started</option>
+                      <option value="on_track">On Track</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.6rem' }}
+                    onClick={async () => {
+                      await handleSave(selectedGoal.id)
+                      // Reset input for fresh additions
+                      setCheckins(prev => ({
+                        ...prev,
+                        [selectedGoal.id]: {
+                          actual_achievement: '',
+                          actual_date: '',
+                          status: 'not_started'
+                        }
+                      }))
+                      // Brief delay to reload and close
+                      setTimeout(() => {
+                        closeGoalDrawer()
+                      }, 500)
+                    }}
                   >
-                    <option value="not_started">Not Started</option>
-                    <option value="on_track">On Track</option>
-                    <option value="completed">Completed</option>
-                  </select>
+                    Save Progress Update
+                  </button>
                 </div>
-
-                <button 
-                  className="btn btn-primary" 
-                  style={{ width: '100%', marginTop: '0.25rem', padding: '0.6rem' }}
-                  onClick={async () => {
-                    await handleSave(selectedGoal.id)
-                    // Reset input for fresh additions
-                    setCheckins(prev => ({
-                      ...prev,
-                      [selectedGoal.id]: {
-                        actual_achievement: '',
-                        actual_date: '',
-                        status: 'not_started'
-                      }
-                    }))
-                    // Brief delay to reload and close
-                    setTimeout(() => {
-                      closeGoalDrawer()
-                    }, 500)
-                  }}
-                >
-                  Save Progress Update
-                </button>
               </div>
-            </div>
+            ) : (
+              <div className="drawer-footer" style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.82rem', padding: '1rem' }}>
+                🔒 Progress updates are locked. No active check-in window is currently open.
+              </div>
+            )}
           </>
         )}
       </div>

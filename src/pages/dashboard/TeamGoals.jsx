@@ -464,7 +464,7 @@ export default function TeamGoals() {
       </div>
 
       {/* ─── High-Level Phase Sub-tabs Toggle ─── */}
-      {view === 'list' && currentQuarter !== 'phase1' && (
+      {view === 'list' && (
         <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', borderBottom: '2px solid #e5e7eb', paddingBottom: '0.25rem' }}>
           <button
             onClick={() => { 
@@ -769,7 +769,7 @@ export default function TeamGoals() {
       )}
 
       {/* ───────────────── SUB-TAB B: PROGRESS CHECK-INS ───────────────── */}
-      {activeMainTab === 'checkins' && currentQuarter !== 'phase1' && (
+      {activeMainTab === 'checkins' && (
         <>
           {/* Employee Directory View */}
           {selectedCheckInEmployee === null ? (

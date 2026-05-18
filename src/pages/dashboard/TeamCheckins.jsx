@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getActiveCycle, getActiveCheckInWindow } from '../../lib/userApi'
+import { getActiveCycle, getActiveCheckInWindow, getMyProfile } from '../../lib/userApi'
 import { getTeamCheckInsSummary, saveManagerComment } from '../../lib/managerApi'
 import { supabase } from '../../lib/supabase'
 
@@ -32,6 +32,23 @@ export default function TeamCheckins() {
         if (activeWindow) {
           const summary = await getTeamCheckInsSummary(activeWindow.id)
           setTeam(summary)
+        } else {
+          // Fallback: Fetch direct reports when no active check-in window is open
+          const me = await getMyProfile()
+          if (me) {
+            const { data: teamList } = await supabase
+              .from('users')
+              .select('id, name')
+              .eq('manager_id', me.id)
+            
+            if (teamList) {
+              setTeam(teamList.map(t => ({
+                employeeId: t.id,
+                employeeName: t.name,
+                hasComment: false
+              })))
+            }
+          }
         }
       }
     } catch (err) {
@@ -186,7 +203,6 @@ export default function TeamCheckins() {
 
   if (loading) return <div className="user-empty">Loading...</div>
   if (!cycle) return <div className="user-empty">No active performance cycle found.</div>
-  if (!window) return <div className="user-empty">No active check-in window found.</div>
 
   return (
     <div>
@@ -337,7 +353,7 @@ export default function TeamCheckins() {
 
       <div className="user-page-header">
         <h1 className="user-page-title">Team Check-ins</h1>
-        <p className="user-page-subtitle">{window.quarter} Window (Closes {window.window_close})</p>
+        <p className="user-page-subtitle">{window ? `${window.quarter} Window (Closes ${window.window_close})` : 'No active check-in window at this time'}</p>
       </div>
 
       {selectedEmployee ? (
@@ -415,13 +431,14 @@ export default function TeamCheckins() {
               style={{ width: '100%', boxSizing: 'border-box', height: '100px', fontSize: '0.9rem' }}
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
-              placeholder="Provide general quarterly performance notes or cycle summary remarks..."
+              placeholder={window ? "Provide general quarterly performance notes or cycle summary remarks..." : "Review notes are locked (no active check-in window open)."}
+              disabled={!window}
             />
           </div>
           
           <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
             <button className="btn-sm btn-ghost-sm" onClick={() => setSelectedEmployee(null)}>Cancel</button>
-            <button className="btn-sm btn-success-sm" onClick={handleSaveAllFeedback} disabled={savingAll}>
+            <button className="btn-sm btn-success-sm" onClick={handleSaveAllFeedback} disabled={savingAll || !window}>
               {savingAll ? 'Saving...' : 'Save Overall Feedback'}
             </button>
           </div>
@@ -553,10 +570,11 @@ export default function TeamCheckins() {
                             <input
                               type="text"
                               className="user-input"
-                              placeholder="Add feedback for this check-in..."
+                              placeholder={window ? "Add feedback for this check-in..." : "Feedback input locked."}
                               style={{ flex: 1, fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
                               defaultValue={h.manager_comment || ''}
                               id={`hist-comm-${h.id}`}
+                              disabled={!window}
                             />
                             <button
                               className="btn-sm btn-primary-sm"
@@ -565,6 +583,7 @@ export default function TeamCheckins() {
                                 const val = document.getElementById(`hist-comm-${h.id}`).value
                                 handleSaveHistoricalComment(h.id, val)
                               }}
+                              disabled={!window}
                             >
                               Save
                             </button>
