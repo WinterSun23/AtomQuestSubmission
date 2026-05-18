@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { signOut } from '../lib/auth'
+import { useApp } from '../lib/AppContext'
 import './AdminLayout.css'
 
 const NAV = [
@@ -43,22 +42,14 @@ const NAV = [
 export default function AdminLayout({ children, openEscalations = 0 }) {
   const navigate  = useNavigate()
   const location  = useLocation()
-  const [userName, setUserName] = useState('')
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const name = data?.user?.user_metadata?.full_name
-                ?? data?.user?.user_metadata?.name
-                ?? data?.user?.email?.split('@')[0]
-                ?? 'Admin'
-      setUserName(name)
-    })
-  }, [])
+  const { me, loading } = useApp()
 
   async function handleSignOut() {
     await signOut()
     navigate('/login')
   }
+
+  if (loading) return null
 
   return (
     <div className="admin-shell">
@@ -71,7 +62,7 @@ export default function AdminLayout({ children, openEscalations = 0 }) {
           <button className="admin-topbar-signout" onClick={() => navigate('/dashboard')} style={{ marginRight: '10px', background: '#f3f4f6' }}>
             🏠 Switch to Portal
           </button>
-          <span className="admin-topbar-user">{userName}</span>
+          <span className="admin-topbar-user">{me?.name || me?.email?.split('@')[0]}</span>
           <button className="admin-topbar-signout" onClick={handleSignOut}>
             Sign out
           </button>

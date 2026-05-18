@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { getActiveCycle, getActiveCheckInWindow, getMyGoalSheet, saveCheckIn, logEvent } from '../../lib/userApi'
+import { getMyGoalSheet, saveCheckIn, logEvent } from '../../lib/userApi'
+import { useApp } from '../../lib/AppContext'
 import { calculateProgressScore } from '../../lib/scoreUtils'
 import { supabase } from '../../lib/supabase'
 
 export default function MyCheckins() {
-  const [cycle, setCycle] = useState(null)
-  const [window, setWindow] = useState(null)
+  const { activeCycle: cycle, activeWindow: window, loading: contextLoading } = useApp()
   const [goals, setGoals] = useState([])
   const [checkins, setCheckins] = useState({}) // mapped by goal_id
   const [loading, setLoading] = useState(true)
@@ -14,46 +14,42 @@ export default function MyCheckins() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [contextLoading, cycle, window])
 
   async function loadData() {
+    if (contextLoading || !cycle) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
-      const activeCycle = await getActiveCycle()
-      setCycle(activeCycle)
-      
-      if (activeCycle) {
-        const activeWindow = await getActiveCheckInWindow(activeCycle.id)
-        setWindow(activeWindow)
-        
-        const sheet = await getMyGoalSheet(activeCycle.id)
-        if (sheet) {
-          setSheetStatus(sheet.status)
-          if (sheet.status === 'approved' && sheet.goals) {
-            setGoals(sheet.goals)
-            
-            if (activeWindow) {
-              // Fetch existing checkins for this window
-              const { data } = await supabase
-                .from('check_ins')
-                .select('*')
-                .eq('window_id', activeWindow.id)
-                .in('goal_id', sheet.goals.map(g => g.id))
-                
-              const checkinsMap = {}
-              if (data) {
-                data.forEach(c => {
-                  checkinsMap[c.goal_id] = {
-                    actual_achievement: c.actual_achievement ?? '',
-                    actual_date: c.actual_date ?? '',
-                    status: c.status,
-                    computed_score: c.computed_score,
-                    manager_comment: c.manager_comment ?? ''
-                  }
-                })
-              }
-              setCheckins(checkinsMap)
+      const sheet = await getMyGoalSheet(cycle.id)
+      if (sheet) {
+        setSheetStatus(sheet.status)
+        if (sheet.status === 'approved' && sheet.goals) {
+          setGoals(sheet.goals)
+          
+          if (window) {
+            // Fetch existing checkins for this window
+            const { data } = await supabase
+              .from('check_ins')
+              .select('*')
+              .eq('window_id', window.id)
+              .in('goal_id', sheet.goals.map(g => g.id))
+              
+            const checkinsMap = {}
+            if (data) {
+              data.forEach(c => {
+                checkinsMap[c.goal_id] = {
+                  actual_achievement: c.actual_achievement ?? '',
+                  actual_date: c.actual_date ?? '',
+                  status: c.status,
+                  computed_score: c.computed_score,
+                  manager_comment: c.manager_comment ?? ''
+                }
+              })
             }
+            setCheckins(checkinsMap)
           }
         }
       }

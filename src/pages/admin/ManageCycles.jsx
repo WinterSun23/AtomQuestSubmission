@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../../layouts/AdminLayout'
 import { getCycles, createCycle, activateCycle, getAllSettings, updateSetting } from '../../lib/adminApi'
-import { supabase } from '../../lib/supabase'
-import { API_URL } from '../../lib/userApi'
+import { generateAchievementReport, triggerBackgroundCron } from '../../lib/backendApi'
 
 export default function ManageCycles() {
   const [cycles,  setCycles]  = useState([])
@@ -19,6 +18,10 @@ export default function ManageCycles() {
   const [reportQuarter, setReportQuarter] = useState('')
   const [generatingReport, setGeneratingReport] = useState(false)
 
+  // Background Jobs
+  const [triggeringCron, setTriggeringCron] = useState(false)
+  const [cronStatus, setCronStatus] = useState('')
+ 
   async function load() {
     const [cyc, sets] = await Promise.all([getCycles(), getAllSettings()])
     setCycles(cyc)
@@ -27,7 +30,7 @@ export default function ManageCycles() {
     setAutoQuarter(sets.find(s => s.key === 'auto_active_quarter')?.value || 'Q1')
   }
   useEffect(() => { load() }, [])
-
+ 
   async function handleCreate(e) {
     e.preventDefault(); setError('')
     if (!form.name) { setError('Cycle name is required.'); return }
@@ -39,7 +42,7 @@ export default function ManageCycles() {
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
-
+ 
   async function handleActivate(id) {
     if (!confirm('Set this as the active cycle? All other cycles will be deactivated.')) return
     await activateCycle(id); load()
@@ -54,25 +57,13 @@ export default function ManageCycles() {
       alert('Error saving override: ' + err.message)
     }
   }
-
+ 
   async function handleGenerateReport() {
     setGeneratingReport(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      const qParam = reportQuarter ? `?quarter=${reportQuarter}` : ''
-      const res = await fetch(`${API_URL}/api/reports/achievement${qParam}`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      })
-      
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to generate report')
-      }
-      
-      const json = await res.json()
-      if (json.url) {
-        window.location.href = json.url // trigger download
+      const data = await generateAchievementReport(null, null, reportQuarter || null)
+      if (data.url) {
+        window.location.href = data.url // trigger download
       }
     } catch (err) {
       alert('Error: ' + err.message)
@@ -81,6 +72,21 @@ export default function ManageCycles() {
     }
   }
 
+  async function handleTriggerCron() {
+    setTriggeringCron(true)
+    setCronStatus('Running checks & calculations...')
+    try {
+      const data = await triggerBackgroundCron()
+      setCronStatus(`Success: ${data.message || 'Escalations scanned and quarters updated.'}`)
+      alert('Background cron job executed successfully!')
+    } catch (err) {
+      setCronStatus(`Error: ${err.message}`)
+      alert('Error triggering background cron: ' + err.message)
+    } finally {
+      setTriggeringCron(false)
+    }
+  }
+ 
   const activeQ = (quarterOverride && quarterOverride !== 'auto') ? quarterOverride : autoQuarter
 
   return (
@@ -116,23 +122,59 @@ export default function ManageCycles() {
         </div>
 
         {/* ── Org Reports ── */}
-        <div className="admin-card" style={{ marginBottom: 0 }}>
-          <div className="admin-card-title">Org Achievement Report</div>
-          <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-            Download an Excel report containing all employee achievements.
-          </p>
-          <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' }}>Filter by Quarter</label>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-            <select className="admin-select" value={reportQuarter} onChange={e => setReportQuarter(e.target.value)} style={{ flex: 1 }}>
-              <option value="">All Quarters</option>
-              <option value="Q1">Q1</option>
-              <option value="Q2">Q2</option>
-              <option value="Q3">Q3</option>
-              <option value="Q4">Q4</option>
-            </select>
+        <div className="admin-card" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div className="admin-card-title">Org Achievement Report</div>
+            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
+              Download an Excel report containing all employee achievements.
+            </p>
+            <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' }}>Filter by Quarter</label>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <select className="admin-select" value={reportQuarter} onChange={e => setReportQuarter(e.target.value)} style={{ flex: 1, boxSizing: 'border-box' }}>
+                <option value="">All Quarters</option>
+                <option value="Q1">Q1</option>
+                <option value="Q2">Q2</option>
+                <option value="Q3">Q3</option>
+                <option value="Q4">Q4</option>
+              </select>
+            </div>
           </div>
           <button className="btn-sm btn-success-sm" onClick={handleGenerateReport} disabled={generatingReport}>
             {generatingReport ? 'Generating...' : 'Generate Excel Report'}
+          </button>
+        </div>
+
+        {/* ── Background Jobs Controller (QOL 1) ── */}
+        <div className="admin-card" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div className="admin-card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              ⚙️ Background Jobs
+            </div>
+            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
+              Manually trigger active quarter transitions and scan employee sheets for late escalation alerts.
+            </p>
+            {cronStatus && (
+              <div style={{
+                padding: '0.6rem 0.8rem',
+                background: cronStatus.startsWith('Error') ? '#fef2f2' : '#f0fdf4',
+                color: cronStatus.startsWith('Error') ? '#991b1b' : '#166534',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                marginBottom: '1rem',
+                border: `1px solid ${cronStatus.startsWith('Error') ? '#fca5a5' : '#bbf7d0'}`,
+                fontWeight: 500
+              }}>
+                {cronStatus}
+              </div>
+            )}
+          </div>
+          <button 
+            className="btn-sm btn-primary-sm" 
+            onClick={handleTriggerCron} 
+            disabled={triggeringCron}
+            style={{ width: '100%' }}
+          >
+            {triggeringCron ? 'Executing Cron Pipeline...' : 'Run Background Cron Tasks Now'}
           </button>
         </div>
       </div>

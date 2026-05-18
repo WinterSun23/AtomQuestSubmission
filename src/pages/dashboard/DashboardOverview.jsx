@@ -1,38 +1,30 @@
 import { useState, useEffect } from 'react'
-import { getActiveCycle, getActiveCheckInWindow } from '../../lib/userApi'
+import { useApp } from '../../lib/AppContext'
 import { supabase } from '../../lib/supabase'
 
 export default function DashboardOverview() {
-  const [cycle, setCycle] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [me, setMe] = useState(null)
+  const { me, activeCycle: cycle, activeWindow, loading: contextLoading } = useApp()
+  const [loadingReports, setLoadingReports] = useState(true)
   const [directReports, setDirectReports] = useState([])
   const [pendingApprovals, setPendingApprovals] = useState([])
   const [completionStats, setCompletionStats] = useState({ completed: 0, total: 0 })
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        
-        const { data: profile } = await supabase.from('users').select('*').eq('auth_id', user.id).single()
-        setMe(profile)
-        
-        const activeCycle = await getActiveCycle()
-        setCycle(activeCycle)
+    if (contextLoading || !me) return
 
-        if (profile && (profile.role === 'manager' || profile.role === 'admin')) {
+    async function loadManagerData() {
+      try {
+        if (me.role === 'manager' || me.role === 'admin') {
           // Fetch direct reports
           const { data: reports } = await supabase
             .from('users')
             .select('id, name, email')
-            .eq('manager_id', profile.id)
+            .eq('manager_id', me.id)
             
           const reportsList = reports || []
           setDirectReports(reportsList)
 
-          if (activeCycle && reportsList.length > 0) {
+          if (cycle && reportsList.length > 0) {
             const reportIds = reportsList.map(r => r.id)
 
             // 1. Fetch pending approvals (submitted goal sheets)
@@ -45,7 +37,6 @@ export default function DashboardOverview() {
             setPendingApprovals(pending || [])
 
             // 2. Fetch check-in completion (manager comments for active window)
-            const activeWindow = await getActiveCheckInWindow(activeCycle.id)
             if (activeWindow) {
               const { data: comments } = await supabase
                 .from('manager_comments')
@@ -63,13 +54,16 @@ export default function DashboardOverview() {
         }
       } catch (err) {
         console.error(err)
+      } finally {
+        setLoadingReports(false)
       }
-      setLoading(false)
     }
-    loadData()
-  }, [])
+    loadManagerData()
+  }, [contextLoading, me, cycle, activeWindow])
 
-  if (loading) return <div className="user-empty">Loading...</div>
+  const isLoading = contextLoading || (me && (me.role === 'manager' || me.role === 'admin') && loadingReports)
+
+  if (isLoading) return <div className="user-empty">Loading...</div>
   if (!me) return <div className="user-empty">Not authenticated.</div>
 
   const isManager = me.role === 'manager' || me.role === 'admin'

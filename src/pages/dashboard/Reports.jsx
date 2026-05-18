@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
-import { API_URL } from '../../lib/userApi'
+import { getReportsList, generateAchievementReport, downloadReport as fetchDownloadUrl } from '../../lib/backendApi'
 
 export default function Reports() {
   const [loading, setLoading] = useState(false)
   const [reports, setReports] = useState([])
-
   const [quarter, setQuarter] = useState('')
 
   useEffect(() => {
@@ -14,16 +12,13 @@ export default function Reports() {
 
   async function loadReports() {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`${API_URL}/api/reports/list`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-      if (!res.ok) throw new Error('Failed to load reports')
-      const json = await res.json()
-      // Filter out empty placeholder files
-      setReports((json.reports || []).filter(f => f.name !== '.emptyFolderPlaceholder').sort((a, b) => new Date(b.created_at) - new Date(a.created_at)))
+      const reportsList = await getReportsList()
+      // Filter out empty placeholder files and sort
+      setReports(
+        reportsList
+          .filter(f => f.name !== '.emptyFolderPlaceholder')
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      )
     } catch (err) {
       console.error('Error loading reports:', err)
     }
@@ -32,23 +27,9 @@ export default function Reports() {
   async function handleGenerateReport() {
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      const qParam = quarter ? `?quarter=${quarter}` : ''
-      const res = await fetch(`${API_URL}/api/reports/achievement${qParam}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-      
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to generate report')
-      }
-      
-      const json = await res.json()
-      if (json.url) {
-        window.location.href = json.url // trigger download
+      const data = await generateAchievementReport(null, null, quarter || null)
+      if (data.url) {
+        window.location.href = data.url // trigger download
       }
       
       // Reload list
@@ -62,15 +43,8 @@ export default function Reports() {
 
   async function downloadReport(fileName) {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`${API_URL}/api/reports/download/${encodeURIComponent(fileName)}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-      if (!res.ok) throw new Error('Failed to get download link')
-      const json = await res.json()
-      window.location.href = json.url
+      const downloadUrl = await fetchDownloadUrl(fileName)
+      window.location.href = downloadUrl
     } catch (err) {
       alert('Error downloading: ' + err.message)
     }

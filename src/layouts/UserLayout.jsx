@@ -2,58 +2,28 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { signOut } from '../lib/auth'
+import { useApp } from '../lib/AppContext'
 import './UserLayout.css'
 
 export default function UserLayout({ children }) {
   const navigate  = useNavigate()
   const location  = useLocation()
-  
-  const [userName, setUserName] = useState('')
-  const [userRole, setUserRole] = useState('employee') // employee, manager, admin
-  const [loading, setLoading] = useState(true)
+  const { me, loading } = useApp()
   
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
 
   useEffect(() => {
-    async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setLoading(false)
-        return
-      }
+    if (loading || !me) return
 
-      // Fetch from public.users to get the definitive role
-      const { data: profile } = await supabase
-        .from('users')
-        .select('name, role')
-        .eq('auth_id', user.id)
-        .maybeSingle()
-
-      if (profile) {
-        setUserName(profile.name)
-        setUserRole(profile.role)
-      } else {
-        // Fallback if profile not found yet
-        setUserName(user.email.split('@')[0])
-      }
-      setLoading(false)
-    }
-    loadUser()
-  }, [])
-
-  useEffect(() => {
     let channel
 
     async function loadNotifications() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      
       const { data } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', me.auth_id)
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -62,15 +32,16 @@ export default function UserLayout({ children }) {
         setUnreadCount(data.filter(n => !n.is_read).length)
       }
 
+      // Realtime notification sync using Supabase WebSockets
       channel = supabase
-        .channel(`user-notifications-${user.id}`)
+        .channel(`user-notifications-${me.auth_id}`)
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${user.id}`
+            filter: `user_id=eq.${me.auth_id}`
           },
           (payload) => {
             setNotifications(prev => [payload.new, ...prev].slice(0, 5))
@@ -85,7 +56,7 @@ export default function UserLayout({ children }) {
     return () => {
       if (channel) supabase.removeChannel(channel)
     }
-  }, [])
+  }, [loading, me])
 
   async function handleSignOut() {
     await signOut()
@@ -105,7 +76,7 @@ export default function UserLayout({ children }) {
   ]
 
   // Add manager section if role is manager or admin
-  if (userRole === 'manager' || userRole === 'admin') {
+  if (me?.role === 'manager' || me?.role === 'admin') {
     NAV.push({
       section: 'Team Portal',
       items: [
@@ -210,12 +181,12 @@ export default function UserLayout({ children }) {
               </div>
             )}
           </div>
-          {userRole === 'admin' && (
+          {me?.role === 'admin' && (
             <button className="user-topbar-signout" onClick={() => navigate('/admin')} style={{ marginRight: '10px', background: '#f3f4f6' }}>
               ⚙️ Switch to Admin
             </button>
           )}
-          <span className="user-topbar-user">{userName}</span>
+          <span className="user-topbar-user">{me?.name || me?.email?.split('@')[0]}</span>
           <button className="user-topbar-signout" onClick={handleSignOut}>
             Sign out
           </button>

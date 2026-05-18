@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getActiveCycle, getMyGoalSheet, createGoalSheet, saveGoals, submitGoalSheet, getThrustAreas, isGoalSubmissionWindowOpen, logEvent } from '../../lib/userApi'
+import { getMyGoalSheet, createGoalSheet, saveGoals, submitGoalSheet, getThrustAreas, logEvent } from '../../lib/userApi'
+import { useApp } from '../../lib/AppContext'
 
 const UOM_OPTIONS = [
   { value: 'numeric_min', label: 'Numeric (Min)' },
@@ -11,37 +12,29 @@ const UOM_OPTIONS = [
 ]
 
 export default function MyGoals() {
-  const [cycle, setCycle] = useState(null)
+  const { activeCycle: cycle, isGoalSubmissionWindowOpen, maxGoalsPerSheet, minGoalWeightage, loading: contextLoading } = useApp()
   const [sheet, setSheet] = useState(null)
   const [thrustAreas, setThrustAreas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [windowOpen, setWindowOpen] = useState(true)
-
-  // Form state
   const [goals, setGoals] = useState([])
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const windowOpen = isGoalSubmissionWindowOpen ? isGoalSubmissionWindowOpen() : false
 
   async function loadData() {
+    if (contextLoading || !cycle) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
-      const activeCycle = await getActiveCycle()
-      setCycle(activeCycle)
       const areas = await getThrustAreas()
       setThrustAreas(areas)
-      
-      const isOpen = await isGoalSubmissionWindowOpen()
-      setWindowOpen(isOpen)
 
-      if (activeCycle) {
-        const mySheet = await getMyGoalSheet(activeCycle.id)
-        if (mySheet) {
-          setSheet(mySheet)
-          setGoals(mySheet.goals || [])
-        }
+      const mySheet = await getMyGoalSheet(cycle.id)
+      if (mySheet) {
+        setSheet(mySheet)
+        setGoals(mySheet.goals || [])
       }
     } catch (err) {
       console.error(err)
@@ -49,6 +42,10 @@ export default function MyGoals() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadData()
+  }, [contextLoading, cycle])
 
   async function handleCreateSheet() {
     if (!cycle) return
@@ -62,7 +59,9 @@ export default function MyGoals() {
   }
 
   function addGoal() {
-    if (goals.length >= 8) return alert('Maximum 8 goals allowed')
+    if (goals.length >= maxGoalsPerSheet) {
+      return alert(`Maximum ${maxGoalsPerSheet} goals allowed`)
+    }
     setGoals([...goals, {
       id: null,
       thrust_area_id: thrustAreas[0]?.id || null,
@@ -71,7 +70,7 @@ export default function MyGoals() {
       uom_type: 'numeric_min',
       target: '',
       target_date: '',
-      weightage: 10,
+      weightage: minGoalWeightage,
       is_shared: false
     }])
   }
@@ -103,14 +102,9 @@ export default function MyGoals() {
       return alert('Goal submission window is currently closed. You cannot submit this goal sheet.')
     }
     
-    const totalWeight = goals.reduce((sum, g) => sum + Number(g.weightage), 0)
-    if (totalWeight !== 100) return alert(`Total weightage must be exactly 100%. Current is ${totalWeight}%`)
-    
-    const invalidGoal = goals.find(g => Number(g.weightage) < 10)
-    if (invalidGoal) return alert('Each goal must have at least 10% weightage')
-
-    const incompleteGoal = goals.find(g => !g.title || !g.target)
-    if (incompleteGoal) return alert('Please fill in title and target for all goals')
+    if (!isSheetValid) {
+      return alert('Please satisfy all validation criteria before submitting.')
+    }
 
     try {
       await saveGoals(sheet.id, goals)
@@ -127,11 +121,54 @@ export default function MyGoals() {
     }
   }
 
-  if (loading) return <div className="user-empty">Loading...</div>
-  if (!cycle) return <div className="user-empty">No active performance cycle found.</div>
-
   const isEditable = sheet && (sheet.status === 'draft' || sheet.status === 'returned')
   const totalWeight = goals.reduce((sum, g) => sum + Number(g.weightage || 0), 0)
+
+  // Validation evaluations
+  const anyUnderMin = goals.some(g => Number(g.weightage || 0) < minGoalWeightage)
+  const exceedsCount = goals.length > maxGoalsPerSheet
+  const zeroGoals = goals.length === 0
+  const hasEmptyFields = goals.some(g => !g.title || (g.uom_type === 'timeline' ? !g.target_date : !g.target))
+  const isSheetValid = totalWeight === 100 && !anyUnderMin && !exceedsCount && !zeroGoals && !hasEmptyFields
+
+  function ValidationBanner() {
+    if (!isEditable) return null
+
+    return (
+      <div style={{
+        padding: '1.25rem',
+        borderRadius: '10px',
+        marginBottom: '1.5rem',
+        background: isSheetValid ? '#f0fdf4' : '#fffbeb',
+        border: `1.5px solid ${isSheetValid ? '#bbf7d0' : '#fef08a'}`,
+        color: isSheetValid ? '#166534' : '#854d0e',
+        fontSize: '0.88rem'
+      }}>
+        <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 700, fontSize: '0.95rem' }}>
+          {isSheetValid ? '✅ Validation Criteria Met' : '⚠️ Validation Rules Checklist'}
+        </h4>
+        <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <li style={{ color: totalWeight === 100 ? '#15803d' : '#b91c1c', fontWeight: totalWeight === 100 ? 600 : 400 }}>
+            Total Weightage must be exactly 100%. (Current: {totalWeight}%)
+          </li>
+          <li style={{ color: !anyUnderMin ? '#15803d' : '#b91c1c', fontWeight: !anyUnderMin ? 600 : 400 }}>
+            Each goal must occupy at least {minGoalWeightage}% weightage.
+          </li>
+          <li style={{ color: !exceedsCount ? '#15803d' : '#b91c1c', fontWeight: !exceedsCount ? 600 : 400 }}>
+            Maximum allowed goals is {maxGoalsPerSheet}. (Current count: {goals.length})
+          </li>
+          <li style={{ color: !hasEmptyFields ? '#15803d' : '#b91c1c', fontWeight: !hasEmptyFields ? 600 : 400 }}>
+            All goals must have a Title and a Target.
+          </li>
+        </ul>
+      </div>
+    )
+  }
+
+  const isLoading = contextLoading || loading
+
+  if (isLoading) return <div className="user-empty">Loading...</div>
+  if (!cycle) return <div className="user-empty">No active performance cycle found.</div>
 
   return (
     <div>
@@ -172,6 +209,8 @@ export default function MyGoals() {
               <strong>Manager Rework Note:</strong> {sheet.rework_note}
             </div>
           )}
+
+          <ValidationBanner />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {goals.length === 0 && <div className="user-empty">No goals added yet.</div>}
@@ -267,7 +306,7 @@ export default function MyGoals() {
                       value={goal.weightage} 
                       onChange={e => updateGoal(i, 'weightage', e.target.value)}
                       disabled={!isEditable} // Editable even for shared goals
-                      min="10" max="100"
+                      min={minGoalWeightage} max="100"
                     />
                   </div>
                 </div>
@@ -277,11 +316,21 @@ export default function MyGoals() {
 
           {isEditable && (
             <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
-              <button className="btn-sm btn-ghost-sm" onClick={addGoal}>+ Add Goal</button>
+              <button className="btn-sm btn-ghost-sm" onClick={addGoal} disabled={goals.length >= maxGoalsPerSheet}>+ Add Goal</button>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button className="btn-sm btn-ghost-sm" onClick={handleSaveDraft}>Save Draft</button>
                 {windowOpen ? (
-                  <button className="btn-sm btn-primary-sm" onClick={handleSubmit}>Submit for Approval</button>
+                  <button 
+                    className="btn-sm btn-primary-sm" 
+                    onClick={handleSubmit} 
+                    disabled={!isSheetValid}
+                    style={{
+                      opacity: isSheetValid ? 1 : 0.5,
+                      cursor: isSheetValid ? 'pointer' : 'not-allowed'
+                    }}
+                  >
+                    Submit for Approval
+                  </button>
                 ) : (
                   <span style={{ fontSize: '0.85rem', color: '#b91c1c', alignSelf: 'center', fontWeight: 500 }}>Submission Closed</span>
                 )}

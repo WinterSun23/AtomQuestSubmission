@@ -44,7 +44,7 @@ export async function getMyGoalSheet(cycleId) {
     .eq('employee_id', me.id)
     .eq('cycle_id', cycleId)
     .maybeSingle()
-  
+
   if (error) throw error
   return data
 }
@@ -65,7 +65,7 @@ export async function saveGoals(sheetId, goals) {
   // or use upsert + delete missing. For simplicity, if status is draft/returned, 
   // we delete all existing non-shared goals and insert the new ones.
   // Actually, better to just upsert and delete missing.
-  
+
   const { data: sheet } = await supabase.from('goal_sheets').select('status').eq('id', sheetId).single()
   if (sheet.status === 'submitted' || sheet.status === 'approved') {
     throw new Error('Cannot edit goals after submission')
@@ -73,10 +73,10 @@ export async function saveGoals(sheetId, goals) {
 
   // Find existing goals to see what to delete
   const { data: existingGoals } = await supabase.from('goals').select('id, is_shared').eq('goal_sheet_id', sheetId)
-  
+
   const incomingIds = goals.map(g => g.id).filter(Boolean)
   const toDelete = existingGoals.filter(eg => !eg.is_shared && !incomingIds.includes(eg.id)).map(eg => eg.id)
-  
+
   if (toDelete.length > 0) {
     await supabase.from('goals').delete().in('id', toDelete)
   }
@@ -150,7 +150,7 @@ export async function getActiveCheckInWindow(cycleId) {
   const { data: settings } = await supabase.from('app_settings').select('*')
   const override = settings?.find(s => s.key === 'active_quarter_override')?.value
   const auto = settings?.find(s => s.key === 'auto_active_quarter')?.value
-  
+
   let currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
 
   let { data: windows, error } = await supabase
@@ -177,11 +177,11 @@ export async function getActiveCheckInWindow(cycleId) {
       })
       .select()
       .single()
-      
+
     if (insertErr) throw insertErr
     window = newWindow
   }
-  
+
   return window
 }
 
@@ -215,7 +215,7 @@ export async function saveCheckIn({ goalId, windowId, actualAchievement, actualD
     .eq('goal_id', goalId)
     .eq('window_id', windowId)
     .maybeSingle()
-    
+
   const payload = {
     goal_id: goalId,
     window_id: windowId,
@@ -288,7 +288,7 @@ export async function isGoalSubmissionWindowOpen() {
     const override = settings.find(s => s.key === 'goal_window_open')?.value
     if (override === 'true') return true
     if (override === 'false') return false
-    
+
     // Auto calendar mode: May 1st to June 30th
     const month = new Date().getMonth() + 1 // 1-12
     return month === 5 || month === 6

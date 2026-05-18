@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { AppProvider, useApp } from './lib/AppContext'
 
 // Auth pages
 import Login from './pages/Login'
@@ -33,8 +34,6 @@ import NotificationPrefs from './pages/dashboard/NotificationPrefs'
 
 import './App.css'
 
-
-
 function Spinner() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -43,7 +42,6 @@ function Spinner() {
     </div>
   )
 }
-
 
 /** Guards authenticated routes. Session check only — MFA is enforced at login time. */
 function PrivateRoute({ children }) {
@@ -63,98 +61,52 @@ function PrivateRoute({ children }) {
   return children
 }
 
-/** Guards admin-only routes. Checks session AND that the user has role='admin'. */
+/** Guards admin-only routes. Checks cached user role in the AppContext. */
 function AdminRoute({ children }) {
-  const [state, setState] = useState('loading')
+  const { me, loading } = useApp()
 
-  useEffect(() => {
-    async function check(session) {
-      try {
-        if (!session) { setState('unauthed'); return }
-
-        // Race the DB query against a 5s timeout — if users table
-        // doesn't exist or has RLS issues, don't hang forever
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('role_query_timeout')), 10000)
-        )
-        const query = supabase
-          .from('users')
-          .select('role')
-          .eq('auth_id', session.user.id)
-          .maybeSingle()
-
-        const { data, error } = await Promise.race([query, timeout])
-
-        if (error) {
-          console.warn('[AdminRoute] role query error:', error.message, '→ failing open')
-          setState('authed')
-          return
-        }
-
-        console.log('[AdminRoute] role:', data?.role)
-        setState(data?.role === 'admin' ? 'authed' : 'forbidden')
-      } catch (err) {
-        if (err.message === 'role_query_timeout') {
-          console.warn('[AdminRoute] DB query timed out — users table likely missing. Failing open.')
-          setState('authed') // let the page load, it will show its own empty state
-        } else {
-          console.error('[AdminRoute] threw:', err)
-          setState('forbidden')
-        }
-      }
-    }
-    // Initial role check — getSession() doesn't hold the auth lock, safe to await DB queries
-    supabase.auth.getSession().then(({ data }) => check(data.session))
-
-    // Sign-out / session expiry guard — no DB call here so no deadlock risk
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) setState('unauthed')
-    })
-    return () => listener.subscription.unsubscribe()
-  }, [])
-
-  if (state === 'loading') return <Spinner />
-  if (state === 'unauthed') return <Navigate to="/login" replace />
-  if (state === 'mfa') return <Navigate to="/verify-mfa" replace />
-  if (state === 'enroll') return <Navigate to="/setup-mfa" replace />
-  if (state === 'forbidden') return <Navigate to="/dashboard" replace />
+  if (loading) return <Spinner />
+  if (!me) return <Navigate to="/login" replace />
+  if (me.role !== 'admin') return <Navigate to="/dashboard" replace />
   return children
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* ── Public ── */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/verify-mfa" element={<VerifyMfa />} />
+    <AppProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* ── Public ── */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/verify-mfa" element={<VerifyMfa />} />
 
-        {/* ── Employee / Manager ── */}
-        <Route path="/dashboard" element={<Navigate to="/dashboard/my-goals" replace />} />
-        <Route path="/dashboard/my-goals" element={<PrivateRoute><UserLayout><MyGoals /></UserLayout></PrivateRoute>} />
-        <Route path="/dashboard/my-checkins" element={<PrivateRoute><UserLayout><MyCheckins /></UserLayout></PrivateRoute>} />
-        <Route path="/dashboard/preferences" element={<PrivateRoute><UserLayout><NotificationPrefs /></UserLayout></PrivateRoute>} />
-        
-        {/* Manager only routes (we can guard these later, for now they are in the layout) */}
-        <Route path="/dashboard/team-goals" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
-        <Route path="/dashboard/team-checkins" element={<PrivateRoute><UserLayout><TeamCheckins /></UserLayout></PrivateRoute>} />
-        <Route path="/dashboard/reports" element={<PrivateRoute><UserLayout><Reports /></UserLayout></PrivateRoute>} />
+          {/* ── Employee / Manager ── */}
+          <Route path="/dashboard" element={<Navigate to="/dashboard/my-goals" replace />} />
+          <Route path="/dashboard/my-goals" element={<PrivateRoute><UserLayout><MyGoals /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/my-checkins" element={<PrivateRoute><UserLayout><MyCheckins /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/preferences" element={<PrivateRoute><UserLayout><NotificationPrefs /></UserLayout></PrivateRoute>} />
+          
+          {/* Manager only routes (we can guard these later, for now they are in the layout) */}
+          <Route path="/dashboard/team-goals" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/team-checkins" element={<PrivateRoute><UserLayout><TeamCheckins /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/reports" element={<PrivateRoute><UserLayout><Reports /></UserLayout></PrivateRoute>} />
 
-        {/* ── Admin ── */}
-        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-        <Route path="/admin/users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
-        <Route path="/admin/thrust-areas" element={<AdminRoute><ThrustAreas /></AdminRoute>} />
-        <Route path="/admin/cycles" element={<AdminRoute><ManageCycles /></AdminRoute>} />
-        <Route path="/admin/audit-log" element={<AdminRoute><AuditLog /></AdminRoute>} />
-        <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-        <Route path="/admin/goal-unlock" element={<AdminRoute><GoalUnlock /></AdminRoute>} />
-        <Route path="/admin/escalations" element={<AdminRoute><Escalations /></AdminRoute>} />
+          {/* ── Admin ── */}
+          <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><AdminLayout><ManageUsers /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/thrust-areas" element={<AdminRoute><AdminLayout><ThrustAreas /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/cycles" element={<AdminRoute><AdminLayout><ManageCycles /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/audit-log" element={<AdminRoute><AdminLayout><AuditLog /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/goal-unlock" element={<AdminRoute><AdminLayout><GoalUnlock /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/escalations" element={<AdminRoute><AdminLayout><Escalations /></AdminLayout></AdminRoute>} />
 
-        {/* ── Fallback ── */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* ── Fallback ── */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AppProvider>
   )
 }
