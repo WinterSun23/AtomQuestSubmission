@@ -143,12 +143,15 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
     const { cycleId, quarter } = req.query
     
     // Fetch base data
-    let usersQuery = supabase.from('users').select('id, name, email')
+    let usersQuery = supabase.from('users').select('id, name, email, manager_id, departments(name)')
     if (req.user.role === 'manager') {
       usersQuery = usersQuery.eq('manager_id', req.user.id)
     }
     const { data: users, error: usersErr } = await usersQuery
     if (usersErr) throw usersErr
+    
+    // Fetch all managers for mapping
+    const { data: allManagers } = await supabase.from('users').select('id, name').in('role', ['manager', 'admin'])
     
     if (!users || users.length === 0) {
       return res.status(404).json({ error: 'No users found for this report' })
@@ -171,10 +174,10 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
 
     // Fetch goal sheets for these users
     let sheetsQuery = supabase.from('goal_sheets').select(`
-      id, employee_id, cycle_id,
+      id, employee_id, cycle_id, status,
       goals (
-        id, title, thrust_area_id, thrust_areas(name), uom_type, target, target_date, weightage,
-        check_ins (actual_achievement, actual_date, status, computed_score, window_id)
+        id, title, description, thrust_area_id, thrust_areas(name), uom_type, target, target_date, weightage,
+        check_ins (actual_achievement, actual_date, status, computed_score, window_id, manager_comment, check_in_windows(window_open))
       )
     `).in('employee_id', userIds)
     
@@ -199,6 +202,9 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
         let targetCheckins = g.check_ins || []
         if (targetWindowId) {
           targetCheckins = targetCheckins.filter(c => c.window_id === targetWindowId)
+        } else {
+          // If no specific quarter, sort by window_open date descending to get the latest check-in
+          targetCheckins.sort((a, b) => new Date(b.check_in_windows?.window_open || 0) - new Date(a.check_in_windows?.window_open || 0))
         }
         const checkin = targetCheckins[0] || {}
         const score = checkin.computed_score || 0
@@ -283,28 +289,141 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
     summarySheet.getColumn('C').width = 25
     summarySheet.getColumn('D').width = 18
 
-    // ── Worksheet 2: Detailed Achievements ──
+    // ── Worksheet 2: Completion Dashboard ──
+    const completionSheet = workbook.addWorksheet('Completion Dashboard')
+    completionSheet.columns = [
+      { header: 'Employee Name', key: 'employee', width: 25 },
+      { header: 'Employee Email', key: 'email', width: 28 },
+      { header: 'Department', key: 'department', width: 22 },
+      { header: 'Reporting Manager', key: 'manager', width: 25 },
+      { header: 'Goal Sheet Status', key: 'sheet_status', width: 18 },
+      { header: 'Total Goals', key: 'total_goals', width: 15 },
+      { header: 'Goals Updated', key: 'goals_updated', width: 18 },
+      { header: 'Completion %', key: 'completion_pct', width: 18 },
+      { header: 'Check-in Status', key: 'status', width: 20 },
+    ]
+
+    users.forEach(u => {
+      const managerName = allManagers?.find(m => m.id === u.manager_id)?.name || 'None'
+      const userSheets = sheets.filter(s => s.employee_id === u.id)
+      
+      if (userSheets.length === 0) {
+        completionSheet.addRow({
+          employee: u.name,
+          email: u.email,
+          department: u.departments?.name || '-',
+          manager: managerName,
+          sheet_status: 'NOT CREATED',
+          total_goals: 0,
+          goals_updated: 0,
+          completion_pct: '0%',
+          status: 'NO GOALS'
+        })
+      } else {
+        userSheets.forEach(s => {
+          let gTotal = s.goals?.length || 0
+          let gUpdated = 0
+          s.goals?.forEach(g => {
+            let targetCheckins = g.check_ins || []
+            if (targetWindowId) {
+              targetCheckins = targetCheckins.filter(c => c.window_id === targetWindowId)
+            } else {
+              targetCheckins.sort((a, b) => new Date(b.check_in_windows?.window_open || 0) - new Date(a.check_in_windows?.window_open || 0))
+            }
+            const checkin = targetCheckins[0]
+            if (checkin && checkin.status !== 'not_started') {
+              gUpdated++
+            }
+          })
+          
+          let pct = gTotal > 0 ? Math.round((gUpdated / gTotal) * 100) : 0
+          let statusText = pct === 100 ? 'COMPLETED' : (pct > 0 ? 'IN PROGRESS' : 'NOT STARTED')
+          
+          completionSheet.addRow({
+            employee: u.name,
+            email: u.email,
+            department: u.departments?.name || '-',
+            manager: managerName,
+            sheet_status: (s.status || 'draft').replace('_', ' ').toUpperCase(),
+            total_goals: gTotal,
+            goals_updated: gUpdated,
+            completion_pct: `${pct}%`,
+            status: statusText
+          })
+        })
+      }
+    })
+
+    // Stylize Completion Dashboard
+    const compHeaderRow = completionSheet.getRow(1)
+    compHeaderRow.height = 30
+    compHeaderRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } }
+      cell.font = { name: 'Segoe UI', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+      cell.alignment = { vertical: 'middle', horizontal: 'center' }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        bottom: { style: 'medium', color: { argb: 'FF10B981' } },
+        left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+      }
+    })
+
+    completionSheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return
+      row.height = 22
+      const isEven = rowNumber % 2 === 0
+      row.eachCell((cell) => {
+        cell.font = { name: 'Segoe UI', size: 10, color: { argb: 'FF333333' } }
+        cell.alignment = { vertical: 'middle', horizontal: 'left' }
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          right: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+        }
+        if (isEven) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } }
+        }
+      })
+      row.getCell('total_goals').alignment = { horizontal: 'center', vertical: 'middle' }
+      row.getCell('goals_updated').alignment = { horizontal: 'center', vertical: 'middle' }
+      row.getCell('completion_pct').alignment = { horizontal: 'right', vertical: 'middle' }
+    })
+
+    // ── Worksheet 3: Detailed Achievements ──
     const detailSheetTitle = quarter ? `Detailed Achievements (${quarter})` : 'Detailed Achievements'
     const sheet = workbook.addWorksheet(detailSheetTitle)
     sheet.columns = [
       { header: 'Employee Name', key: 'employee', width: 25 },
       { header: 'Employee Email', key: 'email', width: 28 },
+      { header: 'Department', key: 'department', width: 22 },
+      { header: 'Reporting Manager', key: 'manager', width: 25 },
+      { header: 'Goal Sheet Status', key: 'sheet_status', width: 18 },
       { header: 'Goal Title', key: 'goal', width: 45 },
+      { header: 'Goal Description', key: 'description', width: 50 },
       { header: 'Thrust Area', key: 'thrust_area', width: 22 },
       { header: 'UoM', key: 'uom', width: 15 },
-      { header: 'Target', key: 'target', width: 15 },
-      { header: 'Actual Progress', key: 'actual', width: 15 },
+      { header: 'Planned Target', key: 'target', width: 18 },
+      { header: 'Actual Achievement', key: 'actual', width: 18 },
+      { header: 'Actual Date', key: 'actual_date', width: 15 },
+      { header: 'Check-in Status', key: 'checkin_status', width: 18 },
+      { header: 'Manager Comment', key: 'manager_comment', width: 45 },
       { header: 'Weightage %', key: 'weightage', width: 15 },
-      { header: 'Score %', key: 'score', width: 15 },
-      { header: 'Weighted Score', key: 'weighted_score', width: 15 },
+      { header: 'Progress Score %', key: 'score', width: 18 },
+      { header: 'Weighted Score', key: 'weighted_score', width: 18 },
     ]
 
     sheets.forEach(s => {
       const user = users.find(u => u.id === s.employee_id)
+      const managerName = allManagers?.find(m => m.id === user?.manager_id)?.name || 'None'
+      
       s.goals.forEach(g => {
         let targetCheckins = g.check_ins || []
         if (targetWindowId) {
           targetCheckins = targetCheckins.filter(c => c.window_id === targetWindowId)
+        } else {
+          targetCheckins.sort((a, b) => new Date(b.check_in_windows?.window_open || 0) - new Date(a.check_in_windows?.window_open || 0))
         }
         
         const checkin = targetCheckins[0] || {}
@@ -314,11 +433,18 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
         sheet.addRow({
           employee: user?.name,
           email: user?.email || '-',
+          department: user?.departments?.name || '-',
+          manager: managerName,
+          sheet_status: (s.status || 'draft').replace('_', ' ').toUpperCase(),
           goal: g.title,
+          description: g.description || '-',
           thrust_area: g.thrust_areas?.name || '-',
-          uom: g.uom_type,
-          target: g.target_date || g.target,
-          actual: checkin.actual_date || checkin.actual_achievement || '-',
+          uom: g.uom_type?.replace('_', ' '),
+          target: g.uom_type === 'timeline' ? g.target_date : g.target,
+          actual: checkin.actual_achievement || '-',
+          actual_date: checkin.actual_date || '-',
+          checkin_status: (checkin.status || 'not started').replace('_', ' ').toUpperCase(),
+          manager_comment: checkin.manager_comment || '-',
           weightage: g.weightage,
           score: score.toFixed(2),
           weighted_score: weightedScore.toFixed(2)

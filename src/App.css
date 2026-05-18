@@ -1,8 +1,188 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   -webkit-font-smoothing: antialiased;
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+/* ─── Global Overrides for Check-in & Goal Cards ─── */
+body .checkin-card {
+  background: #161b22 !important;
+  border: 1px solid #30363d !important;
+  box-shadow: none !important;
+  color: #c9d1d9 !important;
+}
+
+body .checkin-card:hover {
+  border-color: #58a6ff !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+body .checkin-card h4,
+body .checkin-card .goal-title {
+  color: #f0f6fc !important;
+}
+
+body .checkin-card p,
+body .checkin-card .goal-desc {
+  color: #8b949e !important;
+}
+
+body .checkin-card div {
+  color: #c9d1d9 !important;
+}
+
+/* Border separator inside cards */
+body .checkin-card div[style*="border-top"],
+body .checkin-card div[style*="borderTop"] {
+  border-top-color: #30363d !important;
+}
+
+/* Thrust Area & UoM meta blocks */
+body .checkin-card div[style*="background: rgb(249, 250, 251)"],
+body .checkin-card div[style*="background: #f9fafb"],
+body .checkin-card div[style*="background-color: rgb(249, 250, 251)"],
+body .checkin-card div[style*="background-color: #f9fafb"] {
+  background: #0d1117 !important;
+  border-color: #30363d !important;
+  color: #8b949e !important;
+}
+
+body .checkin-card div[style*="background: rgb(249, 250, 251)"] *,
+body .checkin-card div[style*="background: #f9fafb"] * {
+  color: #8b949e !important;
+}
+
+/* Colored vertical accent bars on cards */
+body .checkin-card::before {
+  background-color: #30363d !important;
+}
+body .checkin-card.active-completed::before { background-color: #3fb950 !important; }
+body .checkin-card.active-on_track::before { background-color: #58a6ff !important; }
+body .checkin-card.active-draft::before { background-color: #8b949e !important; }
+body .checkin-card.active-rework::before { background-color: #d29922 !important; }
+body .checkin-card.active-not_started::before { background-color: #8b949e !important; }
+
+/* Dashed "Add Goal" placeholder card */
+body div[style*="dashed"] {
+  border-color: #30363d !important;
+  background: #161b22 !important;
+  color: #c9d1d9 !important;
+}
+body div[style*="dashed"] * {
+  color: #c9d1d9 !important;
+}
+body div[style*="dashed"]:hover {
+  border-color: #58a6ff !important;
+  background: #21262d !important;
+}
+
+/* ─── Global Overrides for Notification/Validation Banners ─── */
+/* Warning Banner */
+body div[style*="background: rgb(255, 251, 235)"],
+body div[style*="background: #fffbeb"] {
+  background: rgba(210, 153, 34, 0.15) !important;
+  border-color: rgba(210, 153, 34, 0.3) !important;
+  color: #d29922 !important;
+}
+body div[style*="background: rgb(255, 251, 235)"] *,
+body div[style*="background: #fffbeb"] * {
+  color: #d29922 !important;
+}
+
+/* Success Banner */
+body div[style*="background: rgb(240, 253, 244)"],
+body div[style*="background: #f0fdf4"] {
+  background: rgba(46, 160, 67, 0.15) !important;
+  border-color: rgba(63, 185, 80, 0.3) !important;
+  color: #3fb950 !important;
+}
+body div[style*="background: rgb(240, 253, 244)"] *,
+body div[style*="background: #f0fdf4"] * {
+  color: #3fb950 !important;
+}
+
+/* Error/Notice Banner */
+body div[style*="background: rgb(254, 242, 242)"],
+body div[style*="background: #fef2f2"] {
+  background: rgba(248, 81, 73, 0.15) !important;
+  border-color: rgba(248, 81, 73, 0.3) !important;
+  color: #f85149 !important;
+}
+body div[style*="background: rgb(254, 242, 242)"] *,
+body div[style*="background: #fef2f2"] * {
+  color: #f85149 !important;
+}
+
+/* ─── Global Overrides for Hardcoded Light-Theme Text Colors ─── */
+body [style*="color: #111827"],
+body [style*="color: #374151"],
+body [style*="color: #1f2937"],
+body [style*="color: #4b5563"],
+body [style*="color: #6b7280"],
+body [style*="color: #1e293b"],
+body [style*="color: #334155"],
+body [style*="color: #0f172a"],
+body [style*="color: #475569"],
+body [style*="color: rgb(17, 24, 39)"],
+body [style*="color: rgb(31, 41, 55)"],
+body [style*="color: rgb(55, 65, 81)"],
+body [style*="color: rgb(75, 85, 99)"],
+body [style*="color: rgb(107, 114, 128)"] {
+  color: #c9d1d9 !important;
+}
+
+body [style*="color: #000"],
+body [style*="color: black"],
+body [style*="color: #000000"] {
+  color: #ffffff !important;
+}
+
+body h1, body h2, body h3, body h4, body h5, body h6,
+body h1[style], body h2[style], body h3[style], body h4[style], body h5[style] {
+  color: #f0f6fc !important;
+}
+
+body label, body label[style] {
+  color: #8b949e !important;
+}
+
+body strong, body strong[style] {
+  color: #ffffff !important;
+}
+
+body th, body th[style],
+body td, body td[style] {
+  color: #c9d1d9 !important;
+}
+
+/* ─── Global Overrides for Hardcoded Light-Theme Backgrounds ─── */
+body [style*="background: #fff"],
+body [style*="background: white"],
+body [style*="background: #ffffff"],
+body [style*="background-color: #fff"],
+body [style*="background-color: white"],
+body [style*="background-color: #ffffff"],
+body [style*="background: rgb(255, 255, 255)"],
+body [style*="background-color: rgb(255, 255, 255)"] {
+  background: #161b22 !important;
+  background-color: #161b22 !important;
+  border-color: #30363d !important;
+}
+
+body [style*="background: #f9fafb"],
+body [style*="background: #f3f4f6"],
+body [style*="background: #f8fafc"],
+body [style*="background-color: #f9fafb"],
+body [style*="background-color: #f3f4f6"],
+body [style*="background-color: #f8fafc"],
+body [style*="background: rgb(249, 250, 251)"],
+body [style*="background: rgb(243, 244, 246)"],
+body [style*="background-color: rgb(249, 250, 251)"],
+body [style*="background-color: rgb(243, 244, 246)"] {
+  background: #0d1117 !important;
+  background-color: #0d1117 !important;
+  border-color: #30363d !important;
 }

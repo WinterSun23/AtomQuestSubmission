@@ -150,16 +150,24 @@ export async function submitGoalSheet(sheetId) {
 }
 
 export function getQuarterFixedDates(quarter) {
+  // guide.md schedule:
+  // Phase 1 (Goal Setting): May–June
+  // Q1 Check-in:  July–September
+  // Q2 Check-in:  October–December
+  // Q3 Check-in:  January–February
+  // Q4 / Annual:  March–April
   const currentYear = new Date().getFullYear()
   let startMonth, endMonth, startDay, endDay
   if (quarter === 'Q1') {
-    startMonth = 7; endMonth = 9; startDay = 1; endDay = 30
+    startMonth = 7;  endMonth = 9;  startDay = 1; endDay = 30
   } else if (quarter === 'Q2') {
     startMonth = 10; endMonth = 12; startDay = 1; endDay = 31
   } else if (quarter === 'Q3') {
-    startMonth = 1; endMonth = 3; startDay = 1; endDay = 31
+    // Opens January, closes end of February (before Q4 in March)
+    startMonth = 1;  endMonth = 2;  startDay = 1; endDay = 28
   } else if (quarter === 'Q4') {
-    startMonth = 4; endMonth = 6; startDay = 1; endDay = 30
+    // Opens March, closes end of April
+    startMonth = 3;  endMonth = 4;  startDay = 1; endDay = 30
   }
   const pad = (n) => String(n).padStart(2, '0')
   return {
@@ -176,7 +184,7 @@ export async function getActiveCheckInWindow(cycleId) {
   const override = settings?.find(s => s.key === 'active_quarter_override')?.value
   const auto = settings?.find(s => s.key === 'auto_active_quarter')?.value
 
-  let currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
+  let currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'phase1')
 
   if (currentQ === 'phase1') {
     return null

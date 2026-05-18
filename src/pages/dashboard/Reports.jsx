@@ -65,7 +65,7 @@ export default function Reports() {
     setLoadingPreview(true)
     try {
       // 1. Fetch users under manager/admin scope
-      let uQuery = supabase.from('users').select('id, name, email, role, manager_id')
+      let uQuery = supabase.from('users').select('id, name, email, role, manager_id, departments(name)')
       if (me?.role === 'manager') {
         uQuery = uQuery.eq('manager_id', me.id)
       }
@@ -97,7 +97,7 @@ export default function Reports() {
           id, employee_id, status,
           goals (
             id, title, thrust_area_id, thrust_areas(name), uom_type, target, target_date, weightage,
-            check_ins (actual_achievement, actual_date, status, computed_score, window_id)
+            check_ins (actual_achievement, actual_date, status, computed_score, window_id, manager_comment)
           )
         `)
         .in('employee_id', uids)
@@ -125,6 +125,7 @@ export default function Reports() {
             employeeId: user.id,
             employeeName: user.name,
             employeeEmail: user.email,
+            department: user.departments?.name || '-',
             sheetStatus: s.status,
             goalId: g.id,
             goalTitle: g.title,
@@ -132,6 +133,7 @@ export default function Reports() {
             uom: g.uom_type,
             target: g.target_date || g.target || '-',
             actual: checkin.actual_achievement || checkin.actual_date || '-',
+            checkinStatus: (checkin.status || 'not started').replace('_', ' ').toUpperCase(),
             weightage: g.weightage,
             score: score,
             weightedScore: weightedScore
@@ -326,6 +328,7 @@ export default function Reports() {
                   <th>UoM</th>
                   <th>Target</th>
                   <th>Actual Progress</th>
+                  <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Weight</th>
                   <th style={{ textAlign: 'right' }}>Score</th>
                   <th style={{ textAlign: 'right' }}>Weighted Score</th>
@@ -337,12 +340,18 @@ export default function Reports() {
                     <td>
                       <div style={{ fontWeight: 600, color: '#111827' }}>{row.employeeName}</div>
                       <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{row.employeeEmail}</div>
+                      <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>{row.department}</div>
                     </td>
                     <td style={{ fontSize: '0.85rem', color: '#374151', maxWidth: '280px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{row.goalTitle}</td>
                     <td style={{ fontSize: '0.8rem', color: '#4b5563' }}>{row.thrustArea}</td>
                     <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{row.uom}</td>
                     <td style={{ fontSize: '0.8rem', color: '#4b5563' }}>{row.target}</td>
                     <td style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>{row.actual}</td>
+                    <td>
+                      <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '12px', background: '#f3f4f6', color: '#4b5563', fontWeight: 600 }}>
+                        {row.checkinStatus}
+                      </span>
+                    </td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#4f46e5' }}>{row.weightage}%</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>{row.score.toFixed(1)}%</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#10b981' }}>{row.weightedScore.toFixed(1)}%</td>

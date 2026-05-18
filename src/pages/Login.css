@@ -1,13 +1,15 @@
-/* ── Layout ──────────────────────────────────────────────────────────────── */
+/* ── Layout (GitHub Styled Auth - Dark Theme) ────────────────────────────── */
 .auth-page {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  font-family: 'Inter', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  background-color: #0d1117; /* GitHub Dark BG */
+  color: #c9d1d9;
 }
 
 .auth-brand {
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  background: #161b22; /* GitHub Darker Header Panel */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -15,6 +17,7 @@
   padding: 4rem;
   position: relative;
   overflow: hidden;
+  border-right: 1px solid #30363d;
 }
 
 .auth-brand::before {
@@ -23,7 +26,7 @@
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255,255,255,0.015) 0%, transparent 70%);
   top: -100px;
   right: -100px;
 }
@@ -34,7 +37,7 @@
   width: 350px;
   height: 350px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255,255,255,0.01) 0%, transparent 70%);
   bottom: -80px;
   left: -60px;
 }
@@ -50,18 +53,20 @@
 .brand-logo-icon {
   width: 44px;
   height: 44px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-radius: 12px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.3rem;
+  color: #ffffff;
 }
 
 .brand-logo-name {
   font-size: 1.4rem;
-  font-weight: 700;
-  color: #fff;
+  font-weight: 600;
+  color: #ffffff;
   letter-spacing: -0.02em;
 }
 
@@ -70,24 +75,21 @@
 }
 
 .brand-tagline h1 {
-  font-size: 2.6rem;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   margin: 0 0 1rem;
 }
 
 .brand-tagline h1 span {
-  background: linear-gradient(90deg, #818cf8, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #58a6ff; /* GitHub Blue accent */
 }
 
 .brand-tagline p {
-  color: rgba(255,255,255,0.55);
-  font-size: 1rem;
+  color: #8b949e;
+  font-size: 0.95rem;
   line-height: 1.6;
   max-width: 380px;
   margin: 0;
@@ -105,21 +107,21 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  color: rgba(255,255,255,0.7);
-  font-size: 0.9rem;
+  color: #c9d1d9;
+  font-size: 0.88rem;
 }
 
 .brand-feature-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #818cf8;
+  background: #58a6ff;
   flex-shrink: 0;
 }
 
 /* ── Form panel ──────────────────────────────────────────────────────────── */
 .auth-panel {
-  background: #fafafa;
+  background: #0d1117;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -128,99 +130,114 @@
 
 .auth-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 340px; /* GitHub login card width */
 }
 
 .auth-card-title {
-  font-size: 1.7rem;
-  font-weight: 800;
-  color: #111827;
-  letter-spacing: -0.03em;
-  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: #f0f6fc;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem;
+  text-align: center;
 }
 
 .auth-card-subtitle {
-  color: #6b7280;
-  font-size: 0.9rem;
-  margin: 0 0 2rem;
+  color: #8b949e;
+  font-size: 0.88rem;
+  margin: 0 0 1.5rem;
+  text-align: center;
 }
 
-/* ── Tabs ────────────────────────────────────────────────────────────────── */
+/* ── Inner card box for fields (GitHub form wrapper style) ────────────────── */
+.auth-card form,
+.auth-card-body {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+/* ── Tabs (Segmented controls) ───────────────────────────────────────────── */
 .auth-tabs {
   display: flex;
-  background: #f3f4f6;
-  border-radius: 10px;
-  padding: 4px;
-  margin-bottom: 1.75rem;
+  background: #0d1117;
+  border-radius: 6px;
+  padding: 3px;
+  margin-bottom: 1.25rem;
+  border: 1px solid #30363d;
 }
 
 .auth-tab {
   flex: 1;
-  padding: 0.55rem;
+  padding: 0.45rem;
   border: none;
   background: transparent;
-  border-radius: 7px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: #6b7280;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #8b949e;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.1s, color 0.1s;
 }
 
 .auth-tab.active {
-  background: #fff;
-  color: #111827;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background: #21262d;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 /* ── Inputs ──────────────────────────────────────────────────────────────── */
 .auth-field {
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .auth-label {
   display: block;
   font-size: 0.82rem;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 500;
+  color: #f0f6fc;
   margin-bottom: 0.35rem;
 }
 
 .auth-input {
   width: 100%;
-  padding: 0.7rem 0.9rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 9px;
-  font-size: 0.9rem;
-  color: #111827;
-  background: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #c9d1d9;
+  background: #0d1117;
+  transition: border-color 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
   outline: none;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.2);
 }
 
 .auth-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(56,139,253,0.3);
 }
 
 .auth-input.error {
-  border-color: #ef4444;
+  border-color: #f85149;
 }
 
 /* ── Forgot password link ────────────────────────────────────────────────── */
 .auth-forgot {
   display: flex;
   justify-content: flex-end;
-  margin-top: -0.4rem;
-  margin-bottom: 0.8rem;
+  margin-top: -0.25rem;
+  margin-bottom: 0.6rem;
 }
 
 .auth-forgot button {
   background: none;
   border: none;
-  color: #6366f1;
-  font-size: 0.82rem;
+  color: #58a6ff;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   padding: 0;
@@ -228,61 +245,61 @@
 
 .auth-forgot button:hover { text-decoration: underline; }
 
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
+/* ── Buttons (GitHub Green & Gray buttons) ────────────────────────────────── */
 .btn-primary {
   width: 100%;
-  padding: 0.78rem;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  border: none;
-  border-radius: 9px;
-  font-size: 0.92rem;
+  padding: 0.45rem 1rem;
+  background: #238636; /* GitHub green */
+  color: #ffffff;
+  border: 1px solid rgba(240,246,252,0.1);
+  border-radius: 6px;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: background-color 0.1s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
 }
 
-.btn-primary:hover { opacity: 0.92; }
-.btn-primary:active { transform: scale(0.98); }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary:hover:not(:disabled) { background: #2ea043; }
+.btn-primary:active:not(:disabled) { background: #2a8f3c; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-microsoft {
   width: 100%;
-  padding: 0.75rem;
-  background: #fff;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 9px;
-  font-size: 0.9rem;
+  padding: 0.45rem 1rem;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.88rem;
   font-weight: 600;
-  color: #374151;
+  color: #c9d1d9;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background-color 0.1s, border-color 0.1s;
   margin-top: 0.75rem;
 }
 
-.btn-microsoft:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+.btn-microsoft:hover:not(:disabled) {
+  background: #30363d;
+  border-color: #8b949e;
 }
 
-.btn-microsoft:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-microsoft:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Divider ─────────────────────────────────────────────────────────────── */
 .auth-divider {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin: 1.25rem 0;
-  color: #9ca3af;
-  font-size: 0.8rem;
+  margin: 1rem 0;
+  color: #8b949e;
+  font-size: 0.78rem;
 }
 
 .auth-divider::before,
@@ -290,43 +307,43 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: #e5e7eb;
+  background: #30363d;
 }
 
-/* ── Alerts ──────────────────────────────────────────────────────────────── */
+/* ── Alerts (GitHub Banner Styles) ───────────────────────────────────────── */
 .auth-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #b91c1c;
-  border-radius: 8px;
-  padding: 0.7rem 0.9rem;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+  background: rgba(248,81,73,0.15);
+  border: 1px solid rgba(248,81,73,0.3);
+  color: #f85149;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.85rem;
 }
 
 .auth-success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
-  border-radius: 8px;
-  padding: 0.7rem 0.9rem;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+  background: rgba(46,160,67,0.15);
+  border: 1px solid rgba(63,185,80,0.3);
+  color: #3fb950;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.85rem;
 }
 
 /* ── Spinner ─────────────────────────────────────────────────────────────── */
 .spinner {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: 2px solid rgba(255,255,255,0.4);
-  border-top-color: #fff;
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
 .spinner-dark {
-  border-color: rgba(0,0,0,0.15);
-  border-top-color: #374151;
+  border-color: rgba(240,246,252,0.15);
+  border-top-color: #c9d1d9;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -335,5 +352,5 @@
 @media (max-width: 768px) {
   .auth-page { grid-template-columns: 1fr; }
   .auth-brand { display: none; }
-  .auth-panel { padding: 2rem 1.25rem; background: #fff; }
+  .auth-panel { padding: 2rem 1.25rem; background: #0d1117; }
 }

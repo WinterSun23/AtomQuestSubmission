@@ -230,33 +230,33 @@ export default function DashboardOverview() {
             margin-bottom: 1.5rem;
           }
           .admin-stat-card {
-            background: white;
-            border: 1px solid #e5e7eb;
+            background: #161b22;
+            border: 1px solid #30363d;
             border-radius: 12px;
             padding: 1.25rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: none;
+            transition: transform 0.2s ease, border-color 0.2s ease;
           }
           .admin-stat-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-color: #30363d;
           }
           .stat-label {
             font-size: 0.76rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: #6b7280;
+            color: #8b949e;
             font-weight: 700;
           }
           .stat-value {
             font-size: 1.75rem;
             font-weight: 800;
-            color: #111827;
+            color: #f0f6fc;
             margin: 0.35rem 0 0.15rem 0;
           }
           .stat-sub {
             font-size: 0.74rem;
-            color: #9ca3af;
+            color: #8b949e;
           }
           .analytics-grid {
             display: grid;
@@ -270,14 +270,15 @@ export default function DashboardOverview() {
             }
           }
           .chart-card {
-            background: white;
-            border: 1px solid #e5e7eb;
+            background: #161b22;
+            border: 1px solid #30363d;
             border-radius: 12px;
             padding: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: none;
+            color: #c9d1d9;
           }
           .progress-bar-bg {
-            background: #e5e7eb;
+            background: #30363d;
             border-radius: 9999px;
             height: 8px;
             width: 100%;
@@ -286,7 +287,7 @@ export default function DashboardOverview() {
           }
           .progress-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, #6366f1, #4f46e5);
+            background: linear-gradient(90deg, #58a6ff, #1f6feb);
             border-radius: 9999px;
             transition: width 0.5s ease-out;
           }
@@ -299,40 +300,40 @@ export default function DashboardOverview() {
             text-align: left;
             font-size: 0.78rem;
             text-transform: uppercase;
-            color: #6b7280;
+            color: #8b949e;
             padding: 0.75rem 1rem;
-            background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
+            background: #0d1117;
+            border-bottom: 1px solid #30363d;
           }
           .realtime-table td {
             padding: 0.75rem 1rem;
-            border-bottom: 1px solid #f3f4f6;
+            border-bottom: 1px solid #30363d;
             font-size: 0.85rem;
-            color: #374151;
+            color: #c9d1d9;
           }
           .realtime-table tr:hover {
-            background: #fcfdfd;
+            background: #21262d;
           }
           .team-card {
-            background: white;
-            border: 1px solid #e5e7eb;
+            background: #161b22;
+            border: 1px solid #30363d;
             border-radius: 12px;
             padding: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: none;
           }
           .interactive-section-card {
-            background: white;
-            border: 1.5px solid #e5e7eb;
+            background: #161b22;
+            border: 1.5px solid #30363d;
             border-radius: 12px;
             padding: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: none;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
           }
           .interactive-section-card:hover {
             transform: translateY(-3px);
-            border-color: #6366f1;
-            box-shadow: 0 12px 20px -3px rgba(99, 102, 241, 0.12), 0 4px 6px -2px rgba(99, 102, 241, 0.05);
+            border-color: #58a6ff;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
           }
           .heatmap-grid {
             display: grid;
@@ -351,7 +352,7 @@ export default function DashboardOverview() {
           .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(17, 24, 39, 0.6);
+            background: rgba(1, 4, 9, 0.7);
             backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
@@ -360,9 +361,10 @@ export default function DashboardOverview() {
             padding: 1.5rem;
           }
           .modal-content {
-            background: white;
+            background: #161b22;
+            border: 1px solid #30363d;
             border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
             width: 100%;
             max-width: 800px;
             max-height: 85vh;
@@ -372,7 +374,7 @@ export default function DashboardOverview() {
           }
           .modal-header {
             padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid #30363d;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -381,23 +383,23 @@ export default function DashboardOverview() {
             margin: 0;
             font-size: 1.15rem;
             font-weight: 800;
-            color: #111827;
+            color: #f0f6fc;
           }
           .modal-close-btn {
             background: none;
             border: none;
             font-size: 1.5rem;
-            color: #6b7280;
+            color: #8b949e;
             cursor: pointer;
             transition: color 0.15s ease;
           }
           .modal-close-btn:hover {
-            color: #111827;
+            color: #f0f6fc;
           }
           .modal-filter-bar {
             padding: 1rem 1.5rem;
-            background: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
+            background: #0d1117;
+            border-bottom: 1px solid #30363d;
             display: flex;
             gap: 1rem;
             align-items: center;
@@ -405,22 +407,24 @@ export default function DashboardOverview() {
           .modal-search-input {
             flex: 1;
             padding: 0.55rem 0.85rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #c9d1d9;
             border-radius: 8px;
             font-size: 0.85rem;
             outline: none;
           }
           .modal-search-input:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
           }
           .modal-select-filter {
             padding: 0.55rem 1.5rem 0.55rem 0.85rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #c9d1d9;
             border-radius: 8px;
             font-size: 0.85rem;
-            background: #fff;
-            color: #374151;
           }
           .modal-body {
             padding: 1.5rem;
@@ -435,7 +439,7 @@ export default function DashboardOverview() {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.4);
+            background: rgba(1, 4, 9, 0.6);
             backdrop-filter: blur(4px);
             z-index: 999;
             opacity: 0;
@@ -453,8 +457,9 @@ export default function DashboardOverview() {
             width: 450px;
             max-width: 100vw;
             height: 100%;
-            background: white;
-            box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.1), -4px 0 10px -5px rgba(0, 0, 0, 0.06);
+            background: #161b22;
+            border-left: 1px solid #30363d;
+            box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.3);
             z-index: 1000;
             transform: translateX(100%);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -466,7 +471,7 @@ export default function DashboardOverview() {
           }
           .drawer-header {
             padding: 1.5rem;
-            border-bottom: 1px solid #f3f4f6;
+            border-bottom: 1px solid #30363d;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -478,10 +483,11 @@ export default function DashboardOverview() {
           }
           .drawer-footer {
             padding: 1.5rem;
-            border-top: 1px solid #f3f4f6;
-            background: #f9fafb;
+            border-top: 1px solid #30363d;
+            background: #0d1117;
           }
         `}</style>
+
 
         <div className="user-page-header">
           <h1 className="user-page-title">Welcome back, {me.name}!</h1>
@@ -539,27 +545,27 @@ export default function DashboardOverview() {
                       </linearGradient>
                     </defs>
                     
-                    <line x1="50" y1="30" x2="350" y2="30" stroke="#f3f4f6" strokeWidth="1" />
-                    <line x1="50" y1="75" x2="350" y2="75" stroke="#f3f4f6" strokeWidth="1" />
-                    <line x1="50" y1="120" x2="350" y2="120" stroke="#e5e7eb" strokeWidth="1.5" />
+                    <line x1="50" y1="30" x2="350" y2="30" stroke="#21262d" strokeWidth="1" />
+                    <line x1="50" y1="75" x2="350" y2="75" stroke="#21262d" strokeWidth="1" />
+                    <line x1="50" y1="120" x2="350" y2="120" stroke="#30363d" strokeWidth="1.5" />
                     
                     <path d={closedPath} fill="url(#teamQoqGrad)" />
-                    <path d={smoothPath} fill="none" stroke="#6366f1" strokeWidth="3" />
+                    <path d={smoothPath} fill="none" stroke="#58a6ff" strokeWidth="3" />
                     
-                    <circle cx="50" cy={y1} r="5" fill="#4f46e5" stroke="white" strokeWidth="2" />
-                    <circle cx="150" cy={y2} r="5" fill="#4f46e5" stroke="white" strokeWidth="2" />
-                    <circle cx="250" cy={y3} r="5" fill="#4f46e5" stroke="white" strokeWidth="2" />
-                    <circle cx="350" cy={y4} r="5" fill="#4f46e5" stroke="white" strokeWidth="2" />
-
-                    <text x="50" y={y1 - 10} textAnchor="middle" fontSize="9" fill="#1f2937" fontWeight="bold">{scoreQ1.toFixed(0)}%</text>
-                    <text x="150" y={y2 - 10} textAnchor="middle" fontSize="9" fill="#1f2937" fontWeight="bold">{scoreQ2.toFixed(0)}%</text>
-                    <text x="250" y={y3 - 10} textAnchor="middle" fontSize="9" fill="#1f2937" fontWeight="bold">{scoreQ3.toFixed(0)}%</text>
-                    <text x="350" y={y4 - 10} textAnchor="middle" fontSize="9" fill="#1f2937" fontWeight="bold">{scoreQ4.toFixed(0)}%</text>
+                    <circle cx="50" cy={y1} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
+                    <circle cx="150" cy={y2} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
+                    <circle cx="250" cy={y3} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
+                    <circle cx="350" cy={y4} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
+ 
+                    <text x="50" y={y1 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ1.toFixed(0)}%</text>
+                    <text x="150" y={y2 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ2.toFixed(0)}%</text>
+                    <text x="250" y={y3 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ3.toFixed(0)}%</text>
+                    <text x="350" y={y4 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ4.toFixed(0)}%</text>
                     
-                    <text x="50" y="142" textAnchor="middle" fontSize="10" fill="#6b7280" fontWeight="bold">Q1</text>
-                    <text x="150" y="142" textAnchor="middle" fontSize="10" fill="#6b7280" fontWeight="bold">Q2</text>
-                    <text x="250" y="142" textAnchor="middle" fontSize="10" fill="#6b7280" fontWeight="bold">Q3</text>
-                    <text x="350" y="142" textAnchor="middle" fontSize="10" fill="#6b7280" fontWeight="bold">Q4 / Annual</text>
+                    <text x="50" y="142" textAnchor="middle" fontSize="10" fill="#8b949e" fontWeight="bold">Q1</text>
+                    <text x="150" y="142" textAnchor="middle" fontSize="10" fill="#8b949e" fontWeight="bold">Q2</text>
+                    <text x="250" y="142" textAnchor="middle" fontSize="10" fill="#8b949e" fontWeight="bold">Q3</text>
+                    <text x="350" y="142" textAnchor="middle" fontSize="10" fill="#8b949e" fontWeight="bold">Q4 / Annual</text>
                   </svg>
                 </div>
               </div>

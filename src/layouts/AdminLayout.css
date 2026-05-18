@@ -1,18 +1,19 @@
-/* ── Admin Layout ────────────────────────────────────────────────────────── */
+/* ── Admin Layout - GitHub Dark Theme ────────────────────────────────────── */
 .admin-shell {
   display: grid;
   grid-template-columns: 240px 1fr;
-  grid-template-rows: 56px 1fr;
+  grid-template-rows: 64px 1fr;
   min-height: 100vh;
-  background: #f8f9fc;
-  font-family: 'Inter', sans-serif;
+  background: #0d1117; /* GitHub Dark Canvas BG */
+  color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-/* ── Top bar ─────────────────────────────────────────────────────────────── */
+/* ── Top bar (GitHub Header Dark) ─────────────────────────────────────────── */
 .admin-topbar {
   grid-column: 1 / -1;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: #161b22; /* Darker sub-panel bg */
+  border-bottom: 1px solid #30363d; /* Dark gray border */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -20,26 +21,27 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  color: #f0f6fc;
 }
 
 .admin-topbar-logo {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-weight: 700;
-  font-size: 1rem;
-  color: #111827;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f0f6fc;
   text-decoration: none;
 }
 
 .admin-topbar-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 20px;
-  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #21262d;
+  color: #8b949e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #30363d;
 }
 
 .admin-topbar-right {
@@ -50,38 +52,41 @@
 
 .admin-topbar-user {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: #8b949e;
 }
 
 .admin-topbar-signout {
-  background: none;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 7px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
   padding: 0.35rem 0.8rem;
   font-size: 0.82rem;
   font-weight: 500;
-  color: #374151;
+  color: #c9d1d9;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.admin-topbar-signout:hover { background: #f3f4f6; }
+.admin-topbar-signout:hover {
+  background: #30363d;
+  border-color: #8b949e;
+}
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 .admin-sidebar {
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
-  padding: 1.25rem 0.75rem;
+  background: #0d1117;
+  border-right: 1px solid #30363d;
+  padding: 1.25rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
   overflow-y: auto;
 }
 
 .admin-nav-section {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #9ca3af;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8b949e;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 0.75rem 0.6rem 0.35rem;
 }
@@ -90,13 +95,13 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #6b7280;
-  transition: background 0.15s, color 0.15s;
+  color: #c9d1d9;
+  transition: background 0.1s, color 0.1s;
   cursor: pointer;
   border: none;
   background: none;
@@ -105,23 +110,31 @@
 }
 
 .admin-nav-link:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: #21262d;
+  color: #f0f6fc;
 }
 
 .admin-nav-link.active {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #21262d;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 #f0883e; /* Orange accent line for Admin Active */
+  border-radius: 0;
 }
 
-.admin-nav-link .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+.admin-nav-link .nav-icon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+  color: #8b949e;
+}
 
 .nav-badge {
   margin-left: auto;
-  background: #ef4444;
+  background: #da3633;
   color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 600;
   border-radius: 10px;
   padding: 1px 6px;
   min-width: 18px;
@@ -135,36 +148,38 @@
 }
 
 .admin-page-header {
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 1rem;
 }
 
 .admin-page-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #111827;
-  letter-spacing: -0.02em;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f0f6fc;
   margin: 0 0 0.25rem;
 }
 
 .admin-page-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: 0.85rem;
+  color: #8b949e;
   margin: 0;
 }
 
-/* ── Cards ───────────────────────────────────────────────────────────────── */
+/* ── Cards (GitHub Dark panels) ────────────────────────────────────────────── */
 .admin-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 1.25rem;
   margin-bottom: 1.25rem;
+  box-shadow: none;
 }
 
 .admin-card-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f0f6fc;
   margin: 0 0 1rem;
 }
 
@@ -177,140 +192,192 @@
 }
 
 .admin-stat-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1.25rem 1.5rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .stat-label {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: #8b949e;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .stat-value {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #111827;
-  line-height: 1;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #f0f6fc;
+  line-height: 1.1;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 }
 
 .stat-sub {
-  font-size: 0.78rem;
-  color: #6b7280;
+  font-size: 0.75rem;
+  color: #8b949e;
 }
 
-/* ── Table ───────────────────────────────────────────────────────────────── */
+/* ── Table (Dark Theme) ──────────────────────────────────────────────────── */
 .admin-table-wrap {
   overflow-x: auto;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #161b22;
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
+  color: #c9d1d9;
 }
 
 .admin-table thead {
-  background: #f9fafb;
+  background: #161b22;
 }
 
 .admin-table th {
   text-align: left;
-  padding: 0.7rem 1rem;
+  padding: 0.6rem 0.85rem;
   font-size: 0.75rem;
-  font-weight: 700;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: 1px solid #30363d;
   white-space: nowrap;
 }
 
 .admin-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #30363d;
+  color: #c9d1d9;
   vertical-align: middle;
 }
 
 .admin-table tr:last-child td { border-bottom: none; }
-.admin-table tr:hover td { background: #f9fafb; }
+.admin-table tr:hover td { background: #21262d; }
 
-/* ── Role & status badges ────────────────────────────────────────────────── */
+/* ── Role & status badges (GitHub Dark Pill Tags) ────────────────────────── */
 .badge {
   display: inline-block;
   font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 20px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 2em;
   text-transform: capitalize;
+  border: 1px solid transparent;
 }
-.badge-employee  { background: #eff6ff; color: #1d4ed8; }
-.badge-manager   { background: #f0fdf4; color: #15803d; }
-.badge-admin     { background: #fdf4ff; color: #7e22ce; }
-.badge-approved  { background: #f0fdf4; color: #15803d; }
-.badge-submitted { background: #fffbeb; color: #b45309; }
-.badge-draft     { background: #f9fafb; color: #6b7280; }
-.badge-returned  { background: #fef2f2; color: #b91c1c; }
-.badge-open      { background: #eff6ff; color: #1d4ed8; }
-.badge-resolved  { background: #f0fdf4; color: #15803d; }
+.badge-employee  { background: rgba(56,139,253,0.15); color: #58a6ff; border-color: rgba(88,166,255,0.3); }
+.badge-manager   { background: rgba(46,160,67,0.15); color: #3fb950; border-color: rgba(63,185,80,0.3); }
+.badge-admin     { background: rgba(187,128,250,0.15); color: #bc8cff; border-color: rgba(188,140,255,0.3); }
+.badge-approved  { background: rgba(46,160,67,0.15); color: #3fb950; border-color: rgba(63,185,80,0.3); }
+.badge-submitted { background: rgba(210,153,34,0.15); color: #d29922; border-color: rgba(210,153,34,0.3); }
+.badge-draft     { background: rgba(110,118,129,0.15); color: #8b949e; border-color: rgba(139,148,158,0.3); }
+.badge-returned  { background: rgba(248,81,73,0.15); color: #f85149; border-color: rgba(248,81,73,0.3); }
+.badge-open      { background: rgba(56,139,253,0.15); color: #58a6ff; border-color: rgba(88,166,255,0.3); }
+.badge-resolved  { background: rgba(46,160,67,0.15); color: #3fb950; border-color: rgba(63,185,80,0.3); }
 
-/* ── Inputs / selects ────────────────────────────────────────────────────── */
+/* ── Inputs / selects (Dark Theme) ───────────────────────────────────────── */
 .admin-input {
-  padding: 0.5rem 0.75rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  color: #111827;
-  background: #fff;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #c9d1d9;
+  background: #0d1117;
   outline: none;
-  transition: border-color 0.15s;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.2);
+  transition: border-color 0.15s, background-color 0.15s;
 }
-.admin-input:focus { border-color: #6366f1; }
+.admin-input:focus {
+  border-color: #58a6ff;
+  background: #0d1117;
+  box-shadow: 0 0 0 3px rgba(56,139,253,0.3);
+}
 
 .admin-select {
-  padding: 0.45rem 0.7rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  color: #374151;
-  background: #fff;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #c9d1d9;
+  background: #21262d;
   cursor: pointer;
   outline: none;
 }
-.admin-select:focus { border-color: #6366f1; }
+.admin-select:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(56,139,253,0.3);
+}
 
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
+/* ── Buttons (GitHub Dark Theme Style) ────────────────────────────────────── */
 .btn-sm {
-  padding: 0.4rem 0.9rem;
-  border-radius: 7px;
-  font-size: 0.8rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  border: none;
-  transition: opacity 0.15s;
+  border: 1px solid #30363d;
+  transition: background-color 0.1s, border-color 0.1s;
 }
-.btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #21262d !important;
+  color: #484f58 !important;
+  border-color: #30363d !important;
+}
 
-.btn-primary-sm  { background: linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; }
-.btn-danger-sm   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-.btn-ghost-sm    { background: #f3f4f6; color: #374151; }
-.btn-success-sm  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.btn-primary-sm  {
+  background: #238636; /* GitHub green button */
+  color: #ffffff;
+  border-color: rgba(240,246,252,0.1);
+}
+.btn-primary-sm:hover:not(:disabled) {
+  background: #2ea043;
+}
+
+.btn-danger-sm   {
+  background: #21262d;
+  color: #f85149;
+  border-color: #30363d;
+}
+.btn-danger-sm:hover:not(:disabled) {
+  background: #da3633;
+  color: #ffffff;
+  border-color: #f85149;
+}
+
+.btn-ghost-sm    {
+  background: #21262d;
+  color: #c9d1d9;
+  border-color: #30363d;
+}
+.btn-ghost-sm:hover:not(:disabled) {
+  background: #30363d;
+  border-color: #8b949e;
+}
+
+.btn-success-sm  {
+  background: #238636;
+  color: #ffffff;
+  border-color: rgba(240,246,252,0.1);
+}
+.btn-success-sm:hover:not(:disabled) {
+  background: #2ea043;
+}
 
 /* ── Empty state ─────────────────────────────────────────────────────────── */
 .admin-empty {
   text-align: center;
   padding: 3rem 1rem;
-  color: #9ca3af;
+  color: #8b949e;
   font-size: 0.9rem;
 }
 

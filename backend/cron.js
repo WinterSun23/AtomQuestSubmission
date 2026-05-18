@@ -5,12 +5,13 @@ const { enqueueNotificationJob } = require('./queue')
 const { sendActualEmail } = require('./emailService')
 
 const sendEmail = async (to, subject, body, actionType = 'ESCALATION') => {
+  const portalUrl = process.env.PORTAL_URL || 'http://localhost:5173'
   const htmlBody = `
     <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
       <h2 style="color: #DC2626;">🚨 Performance Portal System Alert</h2>
       <p style="font-size: 16px; line-height: 1.5; color: #111;">${body}</p>
       <div style="margin: 25px 0;">
-        <a href="http://localhost:5173/dashboard" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Open Portal Dashboard</a>
+        <a href="${portalUrl}/dashboard" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Open Portal Dashboard</a>
       </div>
       <hr style="border: 0; border-top: 1px solid #eee;" />
       <p style="font-size: 12px; color: #888;">This is an automated administrative notification. Please do not reply directly.</p>
@@ -59,6 +60,7 @@ async function runEscalations(supabase) {
     
     if (diff > deadline) {
       // Find employees without a submitted/approved goal sheet for this cycle
+      // Only escalate employees (not managers or admins who may lack goal sheets by design)
       const { data: users } = await supabase.from('users').select('id, name, email, manager_id').eq('role', 'employee')
       const { data: sheets } = await supabase.from('goal_sheets').select('employee_id, status').eq('cycle_id', cycles.id)
       
@@ -363,11 +365,12 @@ async function updateActiveQuarter(supabase) {
     }
 
     const month = new Date().getMonth() + 1 // 1-12
-    let activeQ = 'Q1'
-    if (month >= 7 && month <= 9) activeQ = 'Q1'
+    let activeQ = 'phase1'
+    if (month === 5 || month === 6) activeQ = 'phase1'
+    else if (month >= 7 && month <= 9) activeQ = 'Q1'
     else if (month >= 10 && month <= 12) activeQ = 'Q2'
-    else if (month >= 1 && month <= 3) activeQ = 'Q3'
-    else if (month >= 4 && month <= 6) activeQ = 'Q4'
+    else if (month === 1 || month === 2) activeQ = 'Q3'
+    else if (month === 3 || month === 4) activeQ = 'Q4'
 
     await supabase.from('app_settings').upsert({ key: 'auto_active_quarter', value: activeQ, description: 'Automatically calculated active quarter' })
     console.log(`[Cron] Auto Active Quarter set to: ${activeQ}`)

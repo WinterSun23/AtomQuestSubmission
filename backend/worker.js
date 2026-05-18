@@ -12,6 +12,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 console.log('[Worker] Starting BullMQ Worker consumer...')
 
 const worker = new Worker('notification-queue', async job => {
+  const portalUrl = process.env.PORTAL_URL || 'http://localhost:5173'
   const { recipientId, message, link, actionType } = job.data
   console.log(`[Worker] Processing job ${job.id} for recipient ${recipientId}...`)
 
@@ -81,7 +82,7 @@ const worker = new Worker('notification-queue', async job => {
         <p>Hello <strong>${user.name}</strong>,</p>
         <p style="font-size: 16px; line-height: 1.5;">${message}</p>
         <div style="margin: 25px 0;">
-          <a href="http://localhost:5173${link}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Portal Details</a>
+          <a href="${portalUrl}${link}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Portal Details</a>
         </div>
         <hr style="border: 0; border-top: 1px solid #eee;" />
         <p style="font-size: 12px; color: #888;">This is an automated system notification. Please do not reply directly.</p>
@@ -113,7 +114,7 @@ const worker = new Worker('notification-queue', async job => {
 │     {                                                      │
 │       "type": "Action.OpenUrl",                            │
 │       "title": "Open Portal",                              │
-│       "url": "http://localhost:5173${link}"                │
+│       "url": "${portalUrl}${link}"                │
 │     }                                                      │
 │   ]                                                        │
 │ }                                                          │

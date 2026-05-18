@@ -262,13 +262,13 @@ export default function MyGoals() {
           margin-top: 1rem;
         }
         .checkin-card {
-          background: white;
-          border: 1px solid #e5e7eb;
+          background: #161b22;
+          border: 1px solid #30363d;
           border-radius: 12px;
           padding: 1.5rem;
           cursor: pointer;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          box-shadow: none;
           position: relative;
           overflow: hidden;
           display: flex;
@@ -278,8 +278,8 @@ export default function MyGoals() {
         }
         .checkin-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
-          border-color: #4f46e5;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+          border-color: #58a6ff;
         }
         .checkin-card::before {
           content: '';
@@ -288,31 +288,31 @@ export default function MyGoals() {
           left: 0;
           width: 4px;
           height: 100%;
-          background: #e5e7eb;
+          background: #30363d;
           transition: background 0.3s ease;
         }
-        .checkin-card.active-completed::before { background: #10b981; }
-        .checkin-card.active-on_track::before { background: #3b82f6; }
-        .checkin-card.active-draft::before { background: #cbd5e1; }
-        .checkin-card.active-rework::before { background: #f59e0b; }
+        .checkin-card.active-completed::before { background: #3fb950; }
+        .checkin-card.active-on_track::before { background: #58a6ff; }
+        .checkin-card.active-draft::before { background: #8b949e; }
+        .checkin-card.active-rework::before { background: #d29922; }
       `}</style>
       <div className="user-page-header">
         <h1 className="user-page-title">My Goals</h1>
         <p className="user-page-subtitle">Cycle: {cycle.name}</p>
       </div>
 
-      {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+      {error && <div style={{ color: '#f85149', marginBottom: '1rem' }}>{error}</div>}
 
       {!windowOpen && (
-        <div style={{ background: '#fef2f2', borderLeft: '4px solid #ef4444', color: '#991b1b', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+        <div style={{ background: 'rgba(248,81,73,0.15)', borderLeft: '4px solid #f85149', color: '#f85149', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
           <strong>Notice:</strong> The Goal Setting submission window is currently closed. You can create new goal sheets, add goals, and save drafts, but you will not be able to submit them for manager approval.
         </div>
       )}
 
       {!sheet ? (
         <div className="user-card" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-          <h3>No Goal Sheet yet</h3>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>You haven't created a goal sheet for {cycle.name}</p>
+          <h3 style={{ color: '#f0f6fc', marginBottom: '0.5rem' }}>No Goal Sheet yet</h3>
+          <p style={{ color: '#8b949e', marginBottom: '1.5rem' }}>You haven't created a goal sheet for {cycle.name}</p>
           <button className="btn-sm btn-primary-sm" onClick={handleCreateSheet}>
             Create Goal Sheet
           </button>
@@ -320,16 +320,16 @@ export default function MyGoals() {
       ) : (
         <div className="user-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 className="user-card-title" style={{ margin: 0 }}>Goal Sheet Status: <span className={`badge badge-${sheet.status}`}>{sheet.status.replace('_', ' ')}</span></h2>
+            <h2 className="user-card-title" style={{ margin: 0, color: '#f0f6fc' }}>Goal Sheet Status: <span className={`badge badge-${sheet.status}`}>{sheet.status.replace('_', ' ')}</span></h2>
             {canEmployeeEdit && (
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: totalWeight === 100 ? '#15803d' : '#b91c1c' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: totalWeight === 100 ? '#3fb950' : '#f85149' }}>
                 Total Weightage: {totalWeight}% / 100%
               </div>
             )}
           </div>
 
           {sheet.status === 'returned' && sheet.rework_note && (
-            <div style={{ background: '#fffbeb', color: '#b45309', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+            <div style={{ background: 'rgba(210,153,34,0.15)', color: '#d29922', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid rgba(210,153,34,0.3)' }}>
               <strong>Manager Rework Note:</strong> {sheet.rework_note}
             </div>
           )}
@@ -339,7 +339,7 @@ export default function MyGoals() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* ── Personal Goals Section ── */}
             <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#374151', marginBottom: '1rem', marginTop: 0 }}>Personal Goals</h3>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#f0f6fc', marginBottom: '1rem', marginTop: 0 }}>Personal Goals</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
                 {personalGoals.map((goal, i) => {
                   const isLocked = !canEmployeeEdit || goal.is_locked || !isEditable;
@@ -353,26 +353,26 @@ export default function MyGoals() {
                       >
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                            <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#58a6ff', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               👤 Personal Goal #{i + 1} {goal.is_locked && '(Locked)'}
                             </span>
                           </div>
                           
-                          <h4 style={{ fontSize: '0.98rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#111827' }}>
+                          <h4 style={{ fontSize: '0.98rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#f0f6fc' }}>
                             {goal.title}
                           </h4>
-                          <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 0.75rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                          <p style={{ fontSize: '0.78rem', color: '#8b949e', margin: '0 0 0.75rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
                             {goal.description || 'No description provided.'}
                           </p>
                         </div>
                         
-                        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                        <div style={{ borderTop: '1px solid #30363d', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#c9d1d9', marginBottom: '0.5rem' }}>
                             <span>Target: <strong>{goal.target_date || goal.target || '-'}</strong></span>
                             <span>Weightage: <strong>{goal.weightage}%</strong></span>
                           </div>
                           
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.72rem', color: '#6b7280', background: '#f9fafb', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.72rem', color: '#8b949e', background: '#0d1117', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #30363d' }}>
                             <div>📌 <strong>Thrust Area:</strong> {thrustAreas.find(ta => ta.id === goal.thrust_area_id)?.name || 'Thrust Area'}</div>
                             <div>📊 <strong>UoM Type:</strong> {goal.uom_type.replace('_', ' ')}</div>
                           </div>
@@ -385,13 +385,13 @@ export default function MyGoals() {
                     <div key={`personal-${i}`} className="checkin-card active-on_track" style={{ cursor: 'default', minHeight: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                          <h4 style={{ margin: 0, color: '#111827', fontSize: '0.98rem', fontWeight: 700 }}>Goal #{i + 1}</h4>
+                          <h4 style={{ margin: 0, color: '#f0f6fc', fontSize: '0.98rem', fontWeight: 700 }}>Goal #{i + 1}</h4>
                           <button className="btn-sm btn-danger-sm" onClick={() => removeGoalByObject(goal)}>Remove</button>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Title</label>
                             <input 
                               type="text" 
                               className="user-input" 
@@ -401,7 +401,7 @@ export default function MyGoals() {
                             />
                           </div>
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Thrust Area</label>
                             <select 
                               className="user-select" 
                               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -412,7 +412,7 @@ export default function MyGoals() {
                             </select>
                           </div>
                           <div style={{ gridColumn: '1 / -1' }}>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Description (Optional)</label>
                             <textarea 
                               className="user-input" 
                               style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
@@ -421,7 +421,7 @@ export default function MyGoals() {
                             />
                           </div>
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>UoM Type</label>
                             <select 
                               className="user-select" 
                               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -434,7 +434,7 @@ export default function MyGoals() {
                           
                           {goal.uom_type === 'timeline' ? (
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Target Date</label>
                               <input 
                                 type="date" 
                                 className="user-input" 
@@ -445,7 +445,7 @@ export default function MyGoals() {
                             </div>
                           ) : (
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Target Value</label>
                               <input 
                                 type="number" 
                                 className="user-input" 
@@ -457,7 +457,7 @@ export default function MyGoals() {
                           )}
                           
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Weightage (%)</label>
                             <input 
                               type="number" 
                               className="user-input" 
@@ -486,10 +486,10 @@ export default function MyGoals() {
                   <div 
                     onClick={addGoal}
                     style={{
-                      border: '2px dashed #cbd5e1',
+                      border: '2px dashed #30363d',
                       borderRadius: '8px',
                       padding: '1.5rem',
-                      background: '#f8fafc',
+                      background: '#161b22',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
@@ -499,17 +499,17 @@ export default function MyGoals() {
                       transition: 'all 0.2s ease',
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = '#4f46e5'
-                      e.currentTarget.style.background = '#f5f3ff'
+                      e.currentTarget.style.borderColor = '#58a6ff'
+                      e.currentTarget.style.background = '#21262d'
                     }}
                     onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = '#cbd5e1'
-                      e.currentTarget.style.background = '#f8fafc'
+                      e.currentTarget.style.borderColor = '#30363d'
+                      e.currentTarget.style.background = '#161b22'
                     }}
                   >
-                    <span style={{ fontSize: '2.5rem', color: '#94a3b8', marginBottom: '0.5rem' }}>+</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#6b7280' }}>Add Personal Goal</span>
-                    <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                    <span style={{ fontSize: '2.5rem', color: '#8b949e', marginBottom: '0.5rem' }}>+</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#c9d1d9' }}>Add Personal Goal</span>
+                    <span style={{ fontSize: '0.75rem', color: '#8b949e', marginTop: '0.25rem' }}>
                       ({goals.length} of {maxGoalsPerSheet} goals)
                     </span>
                   </div>
@@ -523,11 +523,11 @@ export default function MyGoals() {
 
             {/* ── Shared Goals Section ── */}
             {sharedGoals.length > 0 && (
-              <div style={{ marginTop: '2rem', borderTop: '2px dashed #cbd5e1', paddingTop: '2rem' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#4f46e5', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 0 }}>
+              <div style={{ marginTop: '2rem', borderTop: '2px dashed #30363d', paddingTop: '2rem' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#58a6ff', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 0 }}>
                   <span>🎯</span> Shared Goals from Manager
                 </h3>
-                <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: '1.25rem' }}>
+                <p style={{ fontSize: '0.82rem', color: '#8b949e', marginBottom: '1.25rem' }}>
                   These organization or team-level shared goals are configured by your manager. They do not count toward your personal goal limits.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
@@ -543,26 +543,26 @@ export default function MyGoals() {
                         >
                           <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                              <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              <span style={{ fontSize: '0.72rem', color: '#3fb950', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 👥 Shared Goal #{i + 1}
                               </span>
                             </div>
                             
-                            <h4 style={{ fontSize: '0.98rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#111827' }}>
+                            <h4 style={{ fontSize: '0.98rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#f0f6fc' }}>
                               {goal.title}
                             </h4>
-                            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 0.75rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                            <p style={{ fontSize: '0.78rem', color: '#8b949e', margin: '0 0 0.75rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
                               {goal.description || 'No description provided.'}
                             </p>
                           </div>
                           
-                          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                          <div style={{ borderTop: '1px solid #30363d', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#c9d1d9', marginBottom: '0.5rem' }}>
                               <span>Target: <strong>{goal.target_date || goal.target || '-'}</strong></span>
                               <span>Weightage: <strong>{goal.weightage}%</strong></span>
                             </div>
                             
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.72rem', color: '#6b7280', background: '#f9fafb', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.72rem', color: '#8b949e', background: '#0d1117', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #30363d' }}>
                               <div>📌 <strong>Thrust Area:</strong> {thrustAreas.find(ta => ta.id === goal.thrust_area_id)?.name || 'Thrust Area'}</div>
                               <div>📊 <strong>UoM Type:</strong> {goal.uom_type.replace('_', ' ')}</div>
                             </div>
@@ -575,13 +575,13 @@ export default function MyGoals() {
                       <div key={`shared-${i}`} className="checkin-card active-completed" style={{ cursor: 'default', minHeight: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <h4 style={{ margin: 0, color: '#475569', fontSize: '0.98rem', fontWeight: 700 }}>Shared Goal Details</h4>
-                            <span className="badge badge-draft" style={{ background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe' }}>Shared</span>
+                            <h4 style={{ margin: 0, color: '#f0f6fc', fontSize: '0.98rem', fontWeight: 700 }}>Shared Goal Details</h4>
+                            <span className="badge badge-draft">Shared</span>
                           </div>
 
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Title</label>
                               <input 
                                 type="text" 
                                 className="user-input" 
@@ -591,7 +591,7 @@ export default function MyGoals() {
                               />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Thrust Area</label>
                               <select 
                                 className="user-select" 
                                 style={{ width: '100%', boxSizing: 'border-box' }}
@@ -602,7 +602,7 @@ export default function MyGoals() {
                               </select>
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
-                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Description (Optional)</label>
                               <textarea 
                                 className="user-input" 
                                 style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
@@ -611,7 +611,7 @@ export default function MyGoals() {
                               />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>UoM Type</label>
                               <select 
                                 className="user-select" 
                                 style={{ width: '100%', boxSizing: 'border-box' }}
@@ -624,7 +624,7 @@ export default function MyGoals() {
                             
                             {goal.uom_type === 'timeline' ? (
                               <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
+                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Target Date</label>
                                 <input 
                                   type="date" 
                                   className="user-input" 
@@ -635,7 +635,7 @@ export default function MyGoals() {
                               </div>
                             ) : (
                               <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
+                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Target Value</label>
                                 <input 
                                   type="number" 
                                   className="user-input" 
@@ -646,7 +646,7 @@ export default function MyGoals() {
                               </div>
                             )}
                              <div>
-                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#8b949e' }}>Weightage (%)</label>
                               <input 
                                 type="number" 
                                 className="user-input" 
@@ -697,7 +697,7 @@ export default function MyGoals() {
                     Submit for Approval
                   </button>
                 ) : (
-                  <span style={{ fontSize: '0.85rem', color: '#b91c1c', alignSelf: 'center', fontWeight: 500 }}>Submission Closed</span>
+                  <span style={{ fontSize: '0.85rem', color: '#f85149', alignSelf: 'center', fontWeight: 500 }}>Submission Closed</span>
                 )}
               </div>
             </div>

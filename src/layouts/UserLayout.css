@@ -1,18 +1,19 @@
-/* ── User Layout ────────────────────────────────────────────────────────── */
+/* ── User Layout - GitHub Dark Theme ─────────────────────────────────────── */
 .user-shell {
   display: grid;
   grid-template-columns: 240px 1fr;
-  grid-template-rows: 56px 1fr;
+  grid-template-rows: 64px 1fr;
   min-height: 100vh;
-  background: #f8f9fc;
-  font-family: 'Inter', sans-serif;
+  background: #0d1117; /* GitHub Dark Canvas BG */
+  color: #c9d1d9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-/* ── Top bar ─────────────────────────────────────────────────────────────── */
+/* ── Top bar (GitHub Header Dark) ─────────────────────────────────────────── */
 .user-topbar {
   grid-column: 1 / -1;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: #161b22; /* Darker sub-panel bg */
+  border-bottom: 1px solid #30363d; /* Dark gray border */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -20,26 +21,27 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  color: #f0f6fc;
 }
 
 .user-topbar-logo {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-weight: 700;
-  font-size: 1rem;
-  color: #111827;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f0f6fc;
   text-decoration: none;
 }
 
 .user-topbar-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #0ea5e9, #2563eb);
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 20px;
-  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #21262d;
+  color: #8b949e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #30363d;
 }
 
 .user-topbar-right {
@@ -50,38 +52,41 @@
 
 .user-topbar-user {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: #8b949e;
 }
 
 .user-topbar-signout {
-  background: none;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 7px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
   padding: 0.35rem 0.8rem;
   font-size: 0.82rem;
   font-weight: 500;
-  color: #374151;
+  color: #c9d1d9;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.user-topbar-signout:hover { background: #f3f4f6; }
+.user-topbar-signout:hover {
+  background: #30363d;
+  border-color: #8b949e;
+}
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 .user-sidebar {
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
-  padding: 1.25rem 0.75rem;
+  background: #0d1117;
+  border-right: 1px solid #30363d;
+  padding: 1.25rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
   overflow-y: auto;
 }
 
 .user-nav-section {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #9ca3af;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8b949e;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 0.75rem 0.6rem 0.35rem;
 }
@@ -90,13 +95,13 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.55rem 0.75rem;
-  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #6b7280;
-  transition: background 0.15s, color 0.15s;
+  color: #c9d1d9;
+  transition: background 0.1s, color 0.1s;
   cursor: pointer;
   border: none;
   background: none;
@@ -105,16 +110,24 @@
 }
 
 .user-nav-link:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: #21262d;
+  color: #f0f6fc;
 }
 
 .user-nav-link.active {
-  background: #f0f9ff;
-  color: #0284c7;
+  background: #21262d;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 #58a6ff; /* Blue active accent for Users */
+  border-radius: 0;
 }
 
-.user-nav-link .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+.user-nav-link .nav-icon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+  color: #8b949e;
+}
 
 /* ── Main content ────────────────────────────────────────────────────────── */
 .user-main {
@@ -123,112 +136,143 @@
 }
 
 .user-page-header {
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 1rem;
 }
 
 .user-page-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #111827;
-  letter-spacing: -0.02em;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f0f6fc;
   margin: 0 0 0.25rem;
 }
 
 .user-page-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
+  font-size: 0.85rem;
+  color: #8b949e;
   margin: 0;
 }
 
-/* ── Cards ───────────────────────────────────────────────────────────────── */
+/* ── Cards (GitHub Dark panels) ────────────────────────────────────────────── */
 .user-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 1.25rem;
   margin-bottom: 1.25rem;
+  box-shadow: none;
 }
 
 .user-card-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f0f6fc;
   margin: 0 0 1rem;
 }
 
-/* ── Table ───────────────────────────────────────────────────────────────── */
+/* ── Table (Dark Theme) ──────────────────────────────────────────────────── */
 .user-table-wrap {
   overflow-x: auto;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #161b22;
 }
 
 .user-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
+  color: #c9d1d9;
 }
 
 .user-table thead {
-  background: #f9fafb;
+  background: #161b22;
 }
 
 .user-table th {
   text-align: left;
-  padding: 0.7rem 1rem;
+  padding: 0.6rem 0.85rem;
   font-size: 0.75rem;
-  font-weight: 700;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: 1px solid #30363d;
   white-space: nowrap;
 }
 
 .user-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #30363d;
+  color: #c9d1d9;
   vertical-align: middle;
 }
 
 .user-table tr:last-child td { border-bottom: none; }
-.user-table tr:hover td { background: #f9fafb; }
+.user-table tr:hover td { background: #21262d; }
 
-/* ── Inputs / selects ────────────────────────────────────────────────────── */
+/* ── Inputs / selects (Dark Theme) ───────────────────────────────────────── */
 .user-input {
-  padding: 0.5rem 0.75rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  color: #111827;
-  background: #fff;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #c9d1d9;
+  background: #0d1117;
   outline: none;
-  transition: border-color 0.15s;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.2);
+  transition: border-color 0.15s, background-color 0.15s;
 }
-.user-input:focus { border-color: #0ea5e9; }
-.user-input:disabled { background: #f3f4f6; cursor: not-allowed; }
+.user-input:focus {
+  border-color: #58a6ff;
+  background: #0d1117;
+  box-shadow: 0 0 0 3px rgba(56,139,253,0.3);
+}
+.user-input:disabled {
+  background: #21262d;
+  color: #484f58;
+  cursor: not-allowed;
+  box-shadow: none;
+  border-color: #30363d;
+}
 
 .user-select {
-  padding: 0.45rem 0.7rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  color: #374151;
-  background: #fff;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #c9d1d9;
+  background: #21262d;
   cursor: pointer;
   outline: none;
 }
-.user-select:focus { border-color: #0ea5e9; }
+.user-select:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(56,139,253,0.3);
+}
 
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
-.btn-primary-sm  { background: linear-gradient(135deg,#0ea5e9,#2563eb); color:#fff; }
+/* ── Buttons (GitHub Dark Theme Style) ────────────────────────────────────── */
+.btn-primary-sm  {
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(240,246,252,0.1);
+  background: #238636; /* GitHub green button */
+  color: #ffffff;
+  transition: background-color 0.1s;
+}
+.btn-primary-sm:hover:not(:disabled) {
+  background: #2ea043;
+}
 
 /* ── Empty state ─────────────────────────────────────────────────────────── */
 .user-empty {
   text-align: center;
   padding: 3rem 1rem;
-  color: #9ca3af;
+  color: #8b949e;
   font-size: 0.9rem;
 }
 

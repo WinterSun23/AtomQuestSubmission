@@ -74,7 +74,7 @@ export function AppProvider({ children }) {
       if (activeCycleData) {
         const override = settingsMap['active_quarter_override']
         const auto = settingsMap['auto_active_quarter']
-        const currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
+        const currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'phase1')
 
         if (currentQ === 'phase1') {
           setActiveWindow(null)
