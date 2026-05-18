@@ -186,3 +186,78 @@ body [style*="background-color: rgb(243, 244, 246)"] {
   background-color: #0d1117 !important;
   border-color: #30363d !important;
 }
+
+/* ─── Global Modals & Drawers ─── */
+body .modal-overlay,
+body [class*="modal-overlay"] {
+  background: rgba(1, 4, 9, 0.7) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+body .modal-content,
+body [class*="modal-content"] {
+  background: #161b22 !important;
+  border: 1px solid #30363d !important;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3) !important;
+  color: #c9d1d9 !important;
+}
+
+body .modal-header,
+body [class*="modal-header"] {
+  border-bottom: 1px solid #30363d !important;
+}
+
+body .modal-filter-bar,
+body [class*="modal-filter-bar"] {
+  background: #0d1117 !important;
+  border-bottom: 1px solid #30363d !important;
+}
+
+body .drawer-overlay,
+body [class*="drawer-overlay"] {
+  background: rgba(1, 4, 9, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+body .drawer-body,
+body [class*="drawer-body"] {
+  background: #161b22 !important;
+  border-left: 1px solid #30363d !important;
+  box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.3) !important;
+  color: #c9d1d9 !important;
+}
+
+body .drawer-header,
+body [class*="drawer-header"] {
+  border-bottom: 1px solid #30363d !important;
+}
+
+body .drawer-footer,
+body [class*="drawer-footer"] {
+  border-top: 1px solid #30363d !important;
+  background: #0d1117 !important;
+}
+
+body .realtime-table th,
+body [class*="realtime-table"] th {
+  background: #0d1117 !important;
+  border-bottom: 1px solid #30363d !important;
+  color: #8b949e !important;
+}
+
+body .realtime-table td,
+body [class*="realtime-table"] td {
+  border-bottom: 1px solid #30363d !important;
+  color: #c9d1d9 !important;
+}
+
+/* Modals/Drawers inputs and select boxes */
+body .modal-search-input,
+body .modal-select-filter,
+body [class*="modal-search-input"],
+body [class*="modal-select-filter"] {
+  background: #0d1117 !important;
+  border: 1px solid #30363d !important;
+  color: #c9d1d9 !important;
+}
+
