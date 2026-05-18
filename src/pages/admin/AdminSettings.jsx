@@ -20,6 +20,15 @@ const SETTING_META = {
   max_goals_per_sheet:   { label: 'Max goals per sheet',       type: 'number', hint: 'Maximum number of goals an employee can add (guide says 8)' },
   min_goal_weightage:    { label: 'Min weightage per goal (%)', type: 'number', hint: 'Minimum weightage allowed for a single goal (guide says 10%)' },
   autosubmit_drafts_on_close: { label: 'Auto-submit Drafts on Close', type: 'bool', hint: 'Automatically submit all draft goal sheets when the Goal Setting window closes' },
+  shared_goals_mode: {
+    label: 'Shared Goals Weightage Mode',
+    type: 'select',
+    options: [
+      { value: 'unified', label: 'Unified (100% total)' },
+      { value: 'special', label: 'Special Directive (Layered on top)' }
+    ],
+    hint: 'Unified integrates shared goals into the strict 100% total. Special Directive layers them on top, bypassing weightage constraints.'
+  },
 }
 
 export default function AdminSettings() {

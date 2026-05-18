@@ -12,7 +12,8 @@ const UOM_OPTIONS = [
 ]
 
 export default function MyGoals() {
-  const { activeCycle: cycle, isGoalSubmissionWindowOpen, maxGoalsPerSheet, minGoalWeightage, loading: contextLoading } = useApp()
+  const { activeCycle: cycle, isGoalSubmissionWindowOpen, maxGoalsPerSheet, minGoalWeightage, settings, loading: contextLoading } = useApp()
+  const sharedGoalsMode = settings?.shared_goals_mode || 'unified'
   const [sheet, setSheet] = useState(null)
   const [thrustAreas, setThrustAreas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -59,8 +60,9 @@ export default function MyGoals() {
   }
 
   function addGoal() {
-    if (goals.length >= maxGoalsPerSheet) {
-      return alert(`Maximum ${maxGoalsPerSheet} goals allowed`)
+    const personalGoalsCount = goals.filter(g => !g.is_shared).length
+    if (personalGoalsCount >= maxGoalsPerSheet) {
+      return alert(`Maximum ${maxGoalsPerSheet} personal goals allowed`)
     }
     setGoals([...goals, {
       id: null,
@@ -75,15 +77,16 @@ export default function MyGoals() {
     }])
   }
 
-  function removeGoal(index) {
-    const goalToRemove = goals[index]
-    if (goalToRemove.is_shared) return alert('Cannot remove shared goals')
-    setGoals(goals.filter((_, i) => i !== index))
+  function removeGoalByObject(goalObj) {
+    if (goalObj.is_shared) return alert('Cannot remove shared goals')
+    setGoals(goals.filter(g => g !== goalObj))
   }
 
-  function updateGoal(index, field, value) {
+  function updateGoalByObject(goalObj, field, value) {
+    const absoluteIndex = goals.indexOf(goalObj)
+    if (absoluteIndex === -1) return
     const newGoals = [...goals]
-    newGoals[index][field] = value
+    newGoals[absoluteIndex] = { ...newGoals[absoluteIndex], [field]: value }
     setGoals(newGoals)
   }
 
@@ -122,12 +125,18 @@ export default function MyGoals() {
   }
 
   const isEditable = sheet && (sheet.status === 'draft' || sheet.status === 'returned')
-  const totalWeight = goals.reduce((sum, g) => sum + Number(g.weightage || 0), 0)
+  
+  const personalGoals = goals.filter(g => !g.is_shared)
+  const sharedGoals = goals.filter(g => g.is_shared)
+
+  // Calculate total weight and perform validation based on sharedGoalsMode
+  const goalsToValidate = sharedGoalsMode === 'special' ? goals.filter(g => !g.is_shared) : goals
+  const totalWeight = goalsToValidate.reduce((sum, g) => sum + Number(g.weightage || 0), 0)
 
   // Validation evaluations
-  const anyUnderMin = goals.some(g => Number(g.weightage || 0) < minGoalWeightage)
-  const exceedsCount = goals.length > maxGoalsPerSheet
-  const zeroGoals = goals.length === 0
+  const anyUnderMin = goalsToValidate.some(g => Number(g.weightage || 0) < minGoalWeightage)
+  const exceedsCount = goalsToValidate.length > maxGoalsPerSheet
+  const zeroGoals = goalsToValidate.length === 0
   const hasEmptyFields = goals.some(g => !g.title || (g.uom_type === 'timeline' ? !g.target_date : !g.target))
   const isSheetValid = totalWeight === 100 && !anyUnderMin && !exceedsCount && !zeroGoals && !hasEmptyFields
 
@@ -146,16 +155,17 @@ export default function MyGoals() {
       }}>
         <h4 style={{ margin: '0 0 0.5rem 0', fontWeight: 700, fontSize: '0.95rem' }}>
           {isSheetValid ? '✅ Validation Criteria Met' : '⚠️ Validation Rules Checklist'}
+          {sharedGoalsMode === 'special' && <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#4f46e5', marginLeft: '0.5rem' }}>(Special Directive Mode Active)</span>}
         </h4>
         <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           <li style={{ color: totalWeight === 100 ? '#15803d' : '#b91c1c', fontWeight: totalWeight === 100 ? 600 : 400 }}>
-            Total Weightage must be exactly 100%. (Current: {totalWeight}%)
+            Total Weightage must be exactly 100%. (Current: {totalWeight}%) {sharedGoalsMode === 'special' && <strong style={{ color: '#4f46e5' }}>(Excludes Shared Goals)</strong>}
           </li>
           <li style={{ color: !anyUnderMin ? '#15803d' : '#b91c1c', fontWeight: !anyUnderMin ? 600 : 400 }}>
-            Each goal must occupy at least {minGoalWeightage}% weightage.
+            Each goal must occupy at least {minGoalWeightage}% weightage. {sharedGoalsMode === 'special' && <strong style={{ color: '#4f46e5' }}>(Excludes Shared Goals)</strong>}
           </li>
           <li style={{ color: !exceedsCount ? '#15803d' : '#b91c1c', fontWeight: !exceedsCount ? 600 : 400 }}>
-            Maximum allowed goals is {maxGoalsPerSheet}. (Current count: {goals.length})
+            Maximum allowed goals is {maxGoalsPerSheet}. (Current count: {goalsToValidate.length}) {sharedGoalsMode === 'special' && <strong style={{ color: '#4f46e5' }}>(Excludes Shared Goals)</strong>}
           </li>
           <li style={{ color: !hasEmptyFields ? '#15803d' : '#b91c1c', fontWeight: !hasEmptyFields ? 600 : 400 }}>
             All goals must have a Title and a Target.
@@ -213,105 +223,216 @@ export default function MyGoals() {
           <ValidationBanner />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {goals.length === 0 && <div className="user-empty">No goals added yet.</div>}
-            
-            {goals.map((goal, i) => (
-              <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: goal.is_shared ? '#f8fafc' : '#fff' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h4 style={{ margin: 0 }}>Goal {i + 1} {goal.is_shared && <span className="badge badge-draft" style={{ marginLeft: '10px' }}>Shared by Manager</span>}</h4>
-                  {isEditable && !goal.is_shared && (
-                    <button className="btn-sm btn-danger-sm" onClick={() => removeGoal(i)}>Remove</button>
-                  )}
-                </div>
+            {/* ── Personal Goals Section ── */}
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#374151', marginBottom: '1rem', marginTop: 0 }}>Personal Goals</h3>
+              {personalGoals.length === 0 ? (
+                <div className="user-empty" style={{ padding: '2rem' }}>No personal goals added yet.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {personalGoals.map((goal, i) => (
+                    <div key={`personal-${i}`} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#fff' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <h4 style={{ margin: 0, color: '#111827' }}>Goal #{i + 1}</h4>
+                        {isEditable && (
+                          <button className="btn-sm btn-danger-sm" onClick={() => removeGoalByObject(goal)}>Remove</button>
+                        )}
+                      </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
-                    <input 
-                      type="text" 
-                      className="user-input" 
-                      style={{ width: '100%', boxSizing: 'border-box' }}
-                      value={goal.title} 
-                      onChange={e => updateGoal(i, 'title', e.target.value)}
-                      disabled={!isEditable || goal.is_shared}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
-                    <select 
-                      className="user-select" 
-                      style={{ width: '100%', boxSizing: 'border-box' }}
-                      value={goal.thrust_area_id || ''}
-                      onChange={e => updateGoal(i, 'thrust_area_id', e.target.value)}
-                      disabled={!isEditable || goal.is_shared}
-                    >
-                      {thrustAreas.map(ta => <option key={ta.id} value={ta.id}>{ta.name}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
-                    <textarea 
-                      className="user-input" 
-                      style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
-                      value={goal.description || ''} 
-                      onChange={e => updateGoal(i, 'description', e.target.value)}
-                      disabled={!isEditable || goal.is_shared}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
-                    <select 
-                      className="user-select" 
-                      style={{ width: '100%', boxSizing: 'border-box' }}
-                      value={goal.uom_type}
-                      onChange={e => updateGoal(i, 'uom_type', e.target.value)}
-                      disabled={!isEditable || goal.is_shared}
-                    >
-                      {UOM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-                  
-                  {goal.uom_type === 'timeline' ? (
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
-                      <input 
-                        type="date" 
-                        className="user-input" 
-                        style={{ width: '100%', boxSizing: 'border-box' }}
-                        value={goal.target_date || ''} 
-                        onChange={e => updateGoal(i, 'target_date', e.target.value)}
-                        disabled={!isEditable || goal.is_shared}
-                      />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
+                          <input 
+                            type="text" 
+                            className="user-input" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.title} 
+                            onChange={e => updateGoalByObject(goal, 'title', e.target.value)}
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
+                          <select 
+                            className="user-select" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.thrust_area_id || ''}
+                            onChange={e => updateGoalByObject(goal, 'thrust_area_id', e.target.value)}
+                            disabled={!isEditable}
+                          >
+                            {thrustAreas.map(ta => <option key={ta.id} value={ta.id}>{ta.name}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
+                          <textarea 
+                            className="user-input" 
+                            style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
+                            value={goal.description || ''} 
+                            onChange={e => updateGoalByObject(goal, 'description', e.target.value)}
+                            disabled={!isEditable}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
+                          <select 
+                            className="user-select" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.uom_type}
+                            onChange={e => updateGoalByObject(goal, 'uom_type', e.target.value)}
+                            disabled={!isEditable}
+                          >
+                            {UOM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        
+                        {goal.uom_type === 'timeline' ? (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
+                            <input 
+                              type="date" 
+                              className="user-input" 
+                              style={{ width: '100%', boxSizing: 'border-box' }}
+                              value={goal.target_date || ''} 
+                              onChange={e => updateGoalByObject(goal, 'target_date', e.target.value)}
+                              disabled={!isEditable}
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
+                            <input 
+                              type="number" 
+                              className="user-input" 
+                              style={{ width: '100%', boxSizing: 'border-box' }}
+                              value={goal.target || ''} 
+                              onChange={e => updateGoalByObject(goal, 'target', e.target.value)}
+                              disabled={!isEditable}
+                            />
+                          </div>
+                        )}
+                        
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
+                          <input 
+                            type="number" 
+                            className="user-input" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.weightage} 
+                            onChange={e => updateGoalByObject(goal, 'weightage', e.target.value)}
+                            disabled={!isEditable}
+                            min={minGoalWeightage} max="100"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
-                      <input 
-                        type="number" 
-                        className="user-input" 
-                        style={{ width: '100%', boxSizing: 'border-box' }}
-                        value={goal.target || ''} 
-                        onChange={e => updateGoal(i, 'target', e.target.value)}
-                        disabled={!isEditable || goal.is_shared}
-                      />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Shared Goals Section ── */}
+            {sharedGoals.length > 0 && (
+              <div style={{ marginTop: '2rem', borderTop: '2px dashed #cbd5e1', paddingTop: '2rem' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#4f46e5', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 0 }}>
+                  <span>🎯</span> Shared Goals from Manager
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: '1.25rem' }}>
+                  These organization or team-level shared goals are configured by your manager. They do not count toward your personal goal limits.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {sharedGoals.map((goal, i) => (
+                    <div key={`shared-${i}`} style={{ border: '1.5px dashed #94a3b8', borderRadius: '8px', padding: '1rem', background: '#f8fafc' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <h4 style={{ margin: 0, color: '#475569' }}>Shared Goal Details</h4>
+                        <span className="badge badge-draft" style={{ background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe' }}>Shared</span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
+                          <input 
+                            type="text" 
+                            className="user-input" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.title} 
+                            disabled
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
+                          <select 
+                            className="user-select" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.thrust_area_id || ''}
+                            disabled
+                          >
+                            {thrustAreas.map(ta => <option key={ta.id} value={ta.id}>{ta.name}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
+                          <textarea 
+                            className="user-input" 
+                            style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
+                            value={goal.description || ''} 
+                            disabled
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
+                          <select 
+                            className="user-select" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.uom_type}
+                            disabled
+                          >
+                            {UOM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        
+                        {goal.uom_type === 'timeline' ? (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
+                            <input 
+                              type="date" 
+                              className="user-input" 
+                              style={{ width: '100%', boxSizing: 'border-box' }}
+                              value={goal.target_date || ''} 
+                              disabled
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
+                            <input 
+                              type="number" 
+                              className="user-input" 
+                              style={{ width: '100%', boxSizing: 'border-box' }}
+                              value={goal.target || ''} 
+                              disabled
+                            />
+                          </div>
+                        )}
+                        
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
+                          <input 
+                            type="number" 
+                            className="user-input" 
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            value={goal.weightage} 
+                            onChange={e => updateGoalByObject(goal, 'weightage', e.target.value)}
+                            disabled={!isEditable}
+                            min={minGoalWeightage} max="100"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
-                    <input 
-                      type="number" 
-                      className="user-input" 
-                      style={{ width: '100%', boxSizing: 'border-box' }}
-                      value={goal.weightage} 
-                      onChange={e => updateGoal(i, 'weightage', e.target.value)}
-                      disabled={!isEditable} // Editable even for shared goals
-                      min={minGoalWeightage} max="100"
-                    />
-                  </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
 
           {isEditable && (

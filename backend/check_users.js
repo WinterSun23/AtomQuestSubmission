@@ -1,5 +1,5 @@
-require('dotenv').config({ path: '../.env' })
 require('dotenv').config({ path: '.env' })
+require('dotenv').config({ path: 'backend/.env' })
 const { createClient } = require('@supabase/supabase-js')
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL

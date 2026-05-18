@@ -15,6 +15,7 @@ export default function TeamCheckins() {
   const [goalComments, setGoalComments] = useState({}) // mapped by goal_id
   const [commentText, setCommentText] = useState('')
   const [savingAll, setSavingAll] = useState(false)
+  const [historyCheckins, setHistoryCheckins] = useState([])
 
   useEffect(() => {
     loadData()
@@ -81,6 +82,25 @@ export default function TeamCheckins() {
         }
         setGoalComments(commentsMap)
         setCheckins(checkinsMap)
+
+        // 2b. Fetch all historical check-ins across the entire cycle for these goals
+        const { data: allHistory } = await supabase
+          .from('check_ins')
+          .select(`
+            *,
+            check_in_windows (
+              quarter, window_open, window_close
+            )
+          `)
+          .in('goal_id', sheet.goals.map(g => g.id))
+        
+        if (allHistory) {
+          setHistoryCheckins(allHistory.sort((a, b) => {
+            const qA = a.check_in_windows?.quarter || ''
+            const qB = b.check_in_windows?.quarter || ''
+            return qA.localeCompare(qB)
+          }))
+        }
       }
       
       // 3. Fetch global comment
@@ -105,34 +125,27 @@ export default function TeamCheckins() {
     }))
   }
 
+  async function handleSaveHistoricalComment(checkinId, comment) {
+    try {
+      const { error } = await supabase
+        .from('check_ins')
+        .update({ manager_comment: comment })
+        .eq('id', checkinId)
+
+      if (error) throw error
+      
+      // Update local history state
+      setHistoryCheckins(prev => prev.map(h => h.id === checkinId ? { ...h, manager_comment: comment } : h))
+      alert('Historical comment saved successfully!')
+    } catch (err) {
+      alert('Error saving historical comment: ' + err.message)
+    }
+  }
+
   async function handleSaveAllFeedback() {
     setSavingAll(true)
     try {
-      // 1. Save all individual goal comments
-      const promises = goals.map(async goal => {
-        const comment = goalComments[goal.id] || ''
-        const checkin = checkins[goal.id]
-        
-        if (checkin) {
-          await supabase
-            .from('check_ins')
-            .update({ manager_comment: comment })
-            .eq('id', checkin.id)
-        } else {
-          await supabase
-            .from('check_ins')
-            .insert({
-              goal_id: goal.id,
-              window_id: window.id,
-              status: 'not_started',
-              manager_comment: comment
-            })
-        }
-      })
-      
-      await Promise.all(promises)
-      
-      // 2. Save/upsert overall global review note
+      // Save/upsert overall global review note
       const { data: existingList } = await supabase
         .from('manager_comments')
         .select('id')
@@ -148,7 +161,7 @@ export default function TeamCheckins() {
         await saveManagerComment(selectedEmployee.id, window.id, commentText)
       }
       
-      alert('All goal feedback and overall review notes saved successfully!')
+      alert('Overall review notes saved successfully!')
       setSelectedEmployee(null)
       loadData()
     } catch (err) {
@@ -180,53 +193,112 @@ export default function TeamCheckins() {
           {goals.length === 0 ? (
             <div className="user-empty" style={{ marginBottom: '1.5rem' }}>This employee has no approved goals.</div>
           ) : (
-            <div className="user-table-wrap" style={{ marginBottom: '2rem' }}>
-              <table className="user-table">
-                <thead>
-                  <tr>
-                    <th>Goal Details</th>
-                    <th>Target</th>
-                    <th>Actual Achievement</th>
-                    <th>Status</th>
-                    <th>Score</th>
-                    <th style={{ width: '250px' }}>Manager Feedback Comment</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {goals.map(goal => {
-                    const c = checkins[goal.id] || {}
-                    return (
-                      <tr key={goal.id}>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{goal.title}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Weight: {goal.weightage}%</div>
-                        </td>
-                        <td>{goal.uom_type === 'timeline' ? goal.target_date : goal.target}</td>
-                        <td style={{ fontWeight: 500, color: '#111827' }}>
-                          {goal.uom_type === 'timeline' ? (c.actual_date || '-') : (c.actual_achievement ?? '-')}
-                        </td>
-                        <td>
-                          <span className={`badge badge-${c.status === 'completed' ? 'approved' : c.status === 'on_track' ? 'rework' : 'draft'}`}>
-                            {c.status || 'Not Started'}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>
-                          {c.computed_score !== undefined && c.computed_score !== null ? `${Number(c.computed_score).toFixed(0)}%` : '-'}
-                        </td>
-                        <td>
-                          <textarea
-                            className="user-input"
-                            style={{ width: '100%', minHeight: '60px', fontSize: '0.82rem', padding: '0.4rem' }}
-                            value={goalComments[goal.id] || ''}
-                            onChange={e => handleGoalCommentChange(goal.id, e.target.value)}
-                            placeholder="Add specific comments..."
-                          />
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+              {goals.map(goal => {
+                const goalHistory = historyCheckins.filter(h => h.goal_id === goal.id)
+                return (
+                  <div key={goal.id} className="user-card" style={{ border: '1px solid #e5e7eb', background: '#fbfbfd', padding: '1.5rem', borderRadius: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', borderBottom: '1px solid #f3f4f6', paddingBottom: '0.75rem' }}>
+                      <div>
+                        <h3 style={{ margin: 0, color: '#111827', fontSize: '1.05rem', fontWeight: 700 }}>{goal.title}</h3>
+                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#6b7280' }}>
+                          {goal.description || 'No description provided.'}
+                        </p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span className="badge badge-submitted" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>
+                          Weight: {goal.weightage}%
+                        </span>
+                        <div style={{ marginTop: '0.35rem', fontSize: '0.82rem', fontWeight: 600, color: '#374151' }}>
+                          Target: {goal.uom_type === 'timeline' ? goal.target_date : goal.target}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '1rem' }}>
+                      <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', color: '#4b5563', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        📊 Progress Check-in Submissions ({goalHistory.length})
+                      </h4>
+
+                      {goalHistory.length === 0 ? (
+                        <div className="user-empty" style={{ padding: '1.5rem', background: '#f9fafb', border: '1px dashed #e5e7eb' }}>
+                          No check-ins submitted yet for this goal.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          {goalHistory.map((h, idx) => (
+                            <div key={h.id} style={{
+                              padding: '1rem',
+                              background: 'white',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.75rem',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <strong style={{ fontSize: '0.82rem', color: '#1f2937' }}>
+                                    Submission #{goalHistory.length - idx} ({h.check_in_windows?.quarter || 'Q'})
+                                  </strong>
+                                  <span className={`badge badge-${h.status === 'completed' ? 'approved' : h.status === 'on_track' ? 'rework' : 'draft'}`} style={{ fontSize: '0.7rem' }}>
+                                    {h.status.replace('_', ' ')}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
+                                  Submitted at {new Date(h.updated_at).toLocaleString()}
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', padding: '0.5rem 0', borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6' }}>
+                                <div>
+                                  <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600 }}>ACTUAL ACHIEVEMENT</div>
+                                  <div style={{ fontWeight: 700, color: '#111827', marginTop: '0.15rem', fontSize: '0.9rem' }}>
+                                    {h.actual_achievement !== null ? `${h.actual_achievement}` : (h.actual_date || '—')}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 600 }}>COMPUTED SCORE</div>
+                                  <div style={{ fontWeight: 700, color: '#4f46e5', marginTop: '0.15rem', fontSize: '0.9rem' }}>
+                                    {h.computed_score !== null ? `${Number(h.computed_score).toFixed(0)}%` : '—'}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#4b5563', marginBottom: '0.35rem' }}>
+                                  💬 Manager Feedback Comment
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <input
+                                    type="text"
+                                    className="user-input"
+                                    placeholder="Type feedback for this specific check-in..."
+                                    style={{ flex: 1, fontSize: '0.82rem', padding: '0.35rem 0.5rem' }}
+                                    defaultValue={h.manager_comment || ''}
+                                    id={`hist-comm-${h.id}`}
+                                  />
+                                  <button
+                                    className="btn-sm btn-primary-sm"
+                                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                                    onClick={() => {
+                                      const val = document.getElementById(`hist-comm-${h.id}`).value
+                                      handleSaveHistoricalComment(h.id, val)
+                                    }}
+                                  >
+                                    Save Comment
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
           

@@ -137,7 +137,13 @@ export default function TeamGoals() {
 
   async function handlePushSharedGoal() {
     if (selectedEmployees.length === 0) return alert('Select at least one employee')
-    if (!sharedGoal.title || !sharedGoal.target) return alert('Title and Target are required')
+    
+    if (!sharedGoal.title) return alert('Title is required')
+    if (sharedGoal.uom_type === 'timeline') {
+      if (!sharedGoal.target_date) return alert('Target Date is required for timeline goals')
+    } else {
+      if (!sharedGoal.target) return alert('Target Value is required')
+    }
     
     try {
       await pushSharedGoal({
@@ -220,29 +226,70 @@ export default function TeamGoals() {
             <span className={`badge badge-${selectedSheet.status}`}>{selectedSheet.status.replace('_', ' ')}</span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-            {selectedSheet.goals.map((goal, i) => (
-              <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <h4 style={{ margin: 0 }}>{goal.title} {goal.is_shared && <span className="badge badge-draft">Shared</span>}</h4>
-                  {selectedSheet.status === 'submitted' && (
-                    <button className="btn-sm btn-ghost-sm" onClick={() => handleInlineEdit(goal.id, goal.target, goal.target_date, goal.weightage)}>
-                      Inline Edit
-                    </button>
-                  )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+            {/* ── Personal Goals ── */}
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#374151', marginBottom: '1rem', marginTop: 0 }}>Personal Goals</h3>
+              {selectedSheet.goals.filter(g => !g.is_shared).length === 0 ? (
+                <div className="user-empty" style={{ padding: '1.5rem' }}>No personal goals.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {selectedSheet.goals.filter(g => !g.is_shared).map((goal, i) => (
+                    <div key={`personal-${i}`} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#fff' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <h4 style={{ margin: 0, color: '#111827' }}>Goal #{i + 1}: {goal.title}</h4>
+                        {selectedSheet.status === 'submitted' && (
+                          <button className="btn-sm btn-ghost-sm" onClick={() => handleInlineEdit(goal.id, goal.target, goal.target_date, goal.weightage)}>
+                            Inline Edit
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                        {goal.thrust_areas?.name} | {goal.uom_type.replace('_', ' ')}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                        {goal.description}
+                      </div>
+                      <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                        <div>Target: {goal.target_date || goal.target || '-'}</div>
+                        <div>Weightage: {goal.weightage}%</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                  {goal.thrust_areas?.name} | {goal.uom_type.replace('_', ' ')}
-                </div>
-                <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                  {goal.description}
-                </div>
-                <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', fontWeight: 600 }}>
-                  <div>Target: {goal.target_date || goal.target || '-'}</div>
-                  <div>Weightage: {goal.weightage}%</div>
+              )}
+            </div>
+
+            {/* ── Shared Goals ── */}
+            {selectedSheet.goals.filter(g => g.is_shared).length > 0 && (
+              <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: '1.5rem', marginTop: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#4f46e5', marginBottom: '1rem', marginTop: 0 }}>Shared Goals</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {selectedSheet.goals.filter(g => g.is_shared).map((goal, i) => (
+                    <div key={`shared-${i}`} style={{ border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '1rem', background: '#f8fafc' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <h4 style={{ margin: 0, color: '#475569' }}>{goal.title}</h4>
+                        {selectedSheet.status === 'submitted' && (
+                          <button className="btn-sm btn-ghost-sm" onClick={() => handleInlineEdit(goal.id, goal.target, goal.target_date, goal.weightage)}>
+                            Inline Edit
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                        {goal.thrust_areas?.name} | {goal.uom_type.replace('_', ' ')}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                        {goal.description}
+                      </div>
+                      <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                        <div>Target: {goal.target_date || goal.target || '-'}</div>
+                        <div>Weightage: {goal.weightage}%</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
 
           {selectedSheet.status === 'submitted' && (

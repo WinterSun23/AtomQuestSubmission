@@ -52,7 +52,8 @@ INSERT INTO public.app_settings (key, value, description) VALUES
   ('goal_window_open',    'true',  'Whether the current goal creation window is open'),
   ('escalation_enabled',  'true',  'Whether the escalation cron job is active'),
   ('max_goals_per_sheet', '8',     'Maximum goals an employee can add to one sheet'),
-  ('min_goal_weightage',  '10',    'Minimum weightage allowed per goal (percent)')
+  ('min_goal_weightage',  '10',    'Minimum weightage allowed per goal (percent)'),
+  ('email_notifications_level', 'important', 'Email delivery level configuration (none, important, all)')
 ON CONFLICT (key) DO NOTHING;
 
 -- ── 3. RLS Policies for app_settings ─────────────────────────────────────────

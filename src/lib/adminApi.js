@@ -108,14 +108,40 @@ export async function upsertCheckInWindow({ cycleId, quarter, windowOpen, window
 // ─── Goal Sheet Unlock ────────────────────────────────────────────────────────
 
 export async function searchLockedSheets(query) {
-  const { data, error } = await supabase
-    .from('goal_sheets')
-    .select('id, status, approved_at, employee:users!employee_id(id, name, email)')
-    .eq('status', 'approved')
-    .ilike('users.name', `%${query}%`)
-    .limit(20)
-  if (error) throw error
-  return data
+  if (query && query.trim()) {
+    const trimmed = query.trim()
+    const { data: matchedUsers } = await supabase
+      .from('users')
+      .select('id')
+      .or(`name.ilike.%${trimmed}%,email.ilike.%${trimmed}%`)
+    
+    if (!matchedUsers || matchedUsers.length === 0) {
+      return []
+    }
+    
+    const userIds = matchedUsers.map(u => u.id)
+    const { data, error } = await supabase
+      .from('goal_sheets')
+      .select('id, status, approved_at, employee:users!employee_id(id, name, email)')
+      .eq('status', 'approved')
+      .in('employee_id', userIds)
+      .order('approved_at', { ascending: false })
+      .limit(50)
+      
+    if (error) throw error
+    return data
+  } else {
+    // If query is empty, return all approved sheets
+    const { data, error } = await supabase
+      .from('goal_sheets')
+      .select('id, status, approved_at, employee:users!employee_id(id, name, email)')
+      .eq('status', 'approved')
+      .order('approved_at', { ascending: false })
+      .limit(50)
+      
+    if (error) throw error
+    return data
+  }
 }
 
 export async function unlockGoalSheet(sheetId, reason) {
@@ -165,26 +191,54 @@ export async function getAuditLog({ from, to, page = 0, pageSize = 50 } = {}) {
 // ─── Escalation Log ───────────────────────────────────────────────────────────
 
 export async function getEscalations({ resolved = false } = {}) {
-  const q = supabase
+  let q = supabase
     .from('escalation_log')
     .select(`
       id, rule_id, escalation_level, sent_at, resolved_at, resolve_note,
       employee:users!employee_id(name, email),
-      notified:users!notified_user_id(name, email)
+      notified:users!notified_user_id(name, email),
+      resolver:users!resolved_by(name)
     `)
     .order('sent_at', { ascending: false })
 
-  const { data, error } = await (resolved ? q : q.is('resolved_at', null))
+  if (resolved) {
+    q = q.not('resolved_at', 'is', null)
+  } else {
+    q = q.is('resolved_at', null)
+  }
+
+  const { data, error } = await q
   if (error) throw error
   return data
 }
 
 export async function resolveEscalation(id, note) {
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  let myProfileId = null
+  if (authUser) {
+    const { data: me } = await supabase.from('users').select('id').eq('auth_id', authUser.id).maybeSingle()
+    if (me) myProfileId = me.id
+  }
+
   const { error } = await supabase
     .from('escalation_log')
-    .update({ resolved_at: new Date().toISOString(), resolve_note: note })
+    .update({ 
+      resolved_at: new Date().toISOString(), 
+      resolve_note: note,
+      resolved_by: myProfileId
+    })
     .eq('id', id)
+  
   if (error) throw error
+
+  // Log resolving escalation as audit event
+  if (myProfileId) {
+    await supabase.from('audit_log').insert({
+      user_id: myProfileId,
+      action: 'RESOLVE_ESCALATION',
+      reason: note
+    })
+  }
 }
 
 // ─── Dashboard summary cards ──────────────────────────────────────────────────

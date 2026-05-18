@@ -33,6 +33,78 @@ async function logEventAndNotify(supabase, {
       console.error('[EventRouter] Error inserting into audit_log:', auditError.message)
     }
 
+    // Auto-resolve E1 escalations when goal sheet is submitted
+    if (action === 'SUBMIT_GOAL_SHEET') {
+      const { data: openE1 } = await supabase
+        .from('escalation_log')
+        .select('id')
+        .eq('employee_id', actorId)
+        .eq('rule_id', 'E1')
+        .is('resolved_at', null)
+
+      if (openE1 && openE1.length > 0) {
+        console.log(`[EventRouter] Auto-resolving ${openE1.length} E1 escalations for employee ${actorId}...`)
+        for (const esc of openE1) {
+          await supabase
+            .from('escalation_log')
+            .update({
+              resolved_at: new Date().toISOString(),
+              resolved_by: actorId,
+              resolve_note: 'Auto-resolved: Goal sheet submitted by employee.'
+            })
+            .eq('id', esc.id)
+
+          // Insert audit log for each resolved escalation
+          await supabase.from('audit_log').insert({
+            user_id: actorId,
+            goal_sheet_id: goalSheetId,
+            action: 'RESOLVE_ESCALATION',
+            reason: 'Auto-resolved: Goal sheet submitted by employee.'
+          })
+        }
+      }
+    }
+
+    // Auto-resolve E2 escalations when goal sheet is approved
+    if (action === 'APPROVE_GOAL_SHEET' && goalSheetId) {
+      const { data: sheet } = await supabase
+        .from('goal_sheets')
+        .select('employee_id')
+        .eq('id', goalSheetId)
+        .maybeSingle()
+
+      if (sheet) {
+        const { data: openE2 } = await supabase
+          .from('escalation_log')
+          .select('id')
+          .eq('employee_id', sheet.employee_id)
+          .eq('rule_id', 'E2')
+          .is('resolved_at', null)
+
+        if (openE2 && openE2.length > 0) {
+          console.log(`[EventRouter] Auto-resolving ${openE2.length} E2 escalations for employee ${sheet.employee_id}...`)
+          for (const esc of openE2) {
+            await supabase
+              .from('escalation_log')
+              .update({
+                resolved_at: new Date().toISOString(),
+                resolved_by: actorId,
+                resolve_note: 'Auto-resolved: Goal sheet approved by manager.'
+              })
+              .eq('id', esc.id)
+
+            // Insert audit log for each resolved escalation
+            await supabase.from('audit_log').insert({
+              user_id: actorId,
+              goal_sheet_id: goalSheetId,
+              action: 'RESOLVE_ESCALATION',
+              reason: 'Auto-resolved: Goal sheet approved by manager.'
+            })
+          }
+        }
+      }
+    }
+
     // 2. Resolve target recipients based on action
     const recipients = await resolveRecipients(supabase, { actorId, goalSheetId, action, newValue })
 
@@ -108,6 +180,7 @@ async function resolveRecipients(supabase, { actorId, goalSheetId, action, newVa
 
       case 'DEADLINE_REMINDER':
       case 'DEADLINE_MISSED':
+      case 'RESOLVE_ESCALATION':
         if (employeeId) {
           recipients.push({ id: employeeId })
         } else if (actorId) {
@@ -140,6 +213,7 @@ function getActionLink(action, goalSheetId) {
     case 'CHANGE_MANAGER':
       return '/dashboard'
     case 'DEADLINE_REMINDER':
+    case 'RESOLVE_ESCALATION':
       return '/dashboard/my-goals'
     default:
       return '/dashboard'

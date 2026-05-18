@@ -128,7 +128,7 @@ export function AppProvider({ children }) {
     // Listen to session changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[AppContext] Auth event: ${event}`)
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (event === 'SIGNED_IN') {
         loadAllData()
       } else if (event === 'SIGNED_OUT') {
         setMe(null)

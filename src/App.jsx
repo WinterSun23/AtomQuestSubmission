@@ -10,7 +10,6 @@ import VerifyMfa from './pages/VerifyMfa'
 import ResetPassword from './pages/ResetPassword'
 
 // Layouts
-import AdminLayout from './layouts/AdminLayout'
 import UserLayout from './layouts/UserLayout'
 
 // Admin pages
@@ -31,6 +30,7 @@ import TeamGoals from './pages/dashboard/TeamGoals'
 import TeamCheckins from './pages/dashboard/TeamCheckins'
 import Reports from './pages/dashboard/Reports'
 import NotificationPrefs from './pages/dashboard/NotificationPrefs'
+import TeamEscalations from './pages/dashboard/TeamEscalations'
 
 import './App.css'
 
@@ -91,17 +91,18 @@ export default function App() {
           {/* Manager only routes (we can guard these later, for now they are in the layout) */}
           <Route path="/dashboard/team-goals" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/team-checkins" element={<PrivateRoute><UserLayout><TeamCheckins /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/team-escalations" element={<PrivateRoute><UserLayout><TeamEscalations /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/reports" element={<PrivateRoute><UserLayout><Reports /></UserLayout></PrivateRoute>} />
 
           {/* ── Admin ── */}
-          <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><AdminLayout><ManageUsers /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/thrust-areas" element={<AdminRoute><AdminLayout><ThrustAreas /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/cycles" element={<AdminRoute><AdminLayout><ManageCycles /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/audit-log" element={<AdminRoute><AdminLayout><AuditLog /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/goal-unlock" element={<AdminRoute><AdminLayout><GoalUnlock /></AdminLayout></AdminRoute>} />
-          <Route path="/admin/escalations" element={<AdminRoute><AdminLayout><Escalations /></AdminLayout></AdminRoute>} />
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><ManageUsers /></AdminRoute>} />
+          <Route path="/admin/thrust-areas" element={<AdminRoute><ThrustAreas /></AdminRoute>} />
+          <Route path="/admin/cycles" element={<AdminRoute><ManageCycles /></AdminRoute>} />
+          <Route path="/admin/audit-log" element={<AdminRoute><AuditLog /></AdminRoute>} />
+          <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+          <Route path="/admin/goal-unlock" element={<AdminRoute><GoalUnlock /></AdminRoute>} />
+          <Route path="/admin/escalations" element={<AdminRoute><Escalations /></AdminRoute>} />
 
           {/* ── Fallback ── */}
           <Route path="*" element={<Navigate to="/login" replace />} />

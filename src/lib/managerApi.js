@@ -137,8 +137,8 @@ export async function pushSharedGoal(goalData, employeeIds, cycleId) {
     title: goalData.title,
     description: goalData.description,
     uom_type: goalData.uom_type,
-    target: goalData.target,
-    target_date: goalData.target_date,
+    target: (goalData.target === '' || goalData.target === undefined) ? null : goalData.target,
+    target_date: (goalData.target_date === '' || goalData.target_date === undefined) ? null : goalData.target_date,
     weightage: goalData.weightage,
     is_shared: true
     // We could store shared_source_id if we created a template goal somewhere
@@ -226,4 +226,32 @@ export async function getQuarterlyTeamStats(quarter) {
     completed,
     avgScore: (totalScore / checkins.length).toFixed(1)
   }
+}
+
+export async function getTeamEscalations() {
+  const me = await getMyProfile()
+  
+  // 1. Fetch employee IDs under this manager
+  const { data: employees } = await supabase
+    .from('users')
+    .select('id')
+    .eq('manager_id', me.id)
+    
+  const employeeIds = employees ? employees.map(e => e.id) : []
+  if (employeeIds.length === 0) return []
+  
+  // 2. Fetch open escalations for these employees
+  const { data, error } = await supabase
+    .from('escalation_log')
+    .select(`
+      id, rule_id, escalation_level, sent_at, resolved_at, resolve_note,
+      employee:users!employee_id(name, email),
+      notified:users!notified_user_id(name, email)
+    `)
+    .in('employee_id', employeeIds)
+    .is('resolved_at', null)
+    .order('sent_at', { ascending: false })
+    
+  if (error) throw error
+  return data
 }

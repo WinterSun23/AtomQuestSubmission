@@ -10,6 +10,7 @@ export default function MyCheckins() {
   const [checkins, setCheckins] = useState({}) // mapped by goal_id
   const [loading, setLoading] = useState(true)
   const [sheetStatus, setSheetStatus] = useState(null)
+  const [historyCheckins, setHistoryCheckins] = useState([])
   const [savingAll, setSavingAll] = useState(false)
 
   useEffect(() => {
@@ -30,26 +31,35 @@ export default function MyCheckins() {
           setGoals(sheet.goals)
           
           if (window) {
-            // Fetch existing checkins for this window
-            const { data } = await supabase
-              .from('check_ins')
-              .select('*')
-              .eq('window_id', window.id)
-              .in('goal_id', sheet.goals.map(g => g.id))
-              
             const checkinsMap = {}
-            if (data) {
-              data.forEach(c => {
-                checkinsMap[c.goal_id] = {
-                  actual_achievement: c.actual_achievement ?? '',
-                  actual_date: c.actual_date ?? '',
-                  status: c.status,
-                  computed_score: c.computed_score,
-                  manager_comment: c.manager_comment ?? ''
-                }
-              })
-            }
+            sheet.goals.forEach(g => {
+              checkinsMap[g.id] = {
+                actual_achievement: '',
+                actual_date: '',
+                status: 'not_started'
+              }
+            })
             setCheckins(checkinsMap)
+
+            // Fetch all historical check-ins across the entire cycle for these goals
+            const { data: allHistory } = await supabase
+              .from('check_ins')
+              .select(`
+                *,
+                check_in_windows (
+                  quarter, window_open, window_close
+                )
+              `)
+              .in('goal_id', sheet.goals.map(g => g.id))
+            
+            if (allHistory) {
+              // Sort chronologically by quarter
+              setHistoryCheckins(allHistory.sort((a, b) => {
+                const qA = a.check_in_windows?.quarter || ''
+                const qB = b.check_in_windows?.quarter || ''
+                return qA.localeCompare(qB)
+              }))
+            }
           }
         }
       }
@@ -75,16 +85,7 @@ export default function MyCheckins() {
     if (!data) return
     
     try {
-      // Basic frontend score engine
       const goal = goals.find(g => g.id === goalId)
-      const score = calculateProgressScore(
-        goal.uom_type, 
-        goal.target, 
-        data.actual_achievement, 
-        data.actual_date, 
-        goal.target_date
-      )
-
       await saveCheckIn({
         goalId,
         windowId: window.id,
@@ -92,9 +93,6 @@ export default function MyCheckins() {
         actualDate: goal.uom_type === 'timeline' ? data.actual_date : null,
         status: data.status || 'not_started'
       })
-      
-      // We also should update the computed score, let's update check_ins table manually here for the demo
-      await supabase.from('check_ins').update({ computed_score: score }).eq('goal_id', goalId).eq('window_id', window.id)
       
       await logEvent({
         action: 'UPDATE_PROGRESS',
@@ -115,13 +113,8 @@ export default function MyCheckins() {
     try {
       const promises = goals.map(async goal => {
         const data = checkins[goal.id] || { actual_achievement: '', actual_date: '', status: 'not_started' }
-        const score = calculateProgressScore(
-          goal.uom_type, 
-          goal.target, 
-          data.actual_achievement, 
-          data.actual_date, 
-          goal.target_date
-        )
+        const hasAchievement = goal.uom_type === 'timeline' ? data.actual_date : data.actual_achievement
+        if (!hasAchievement) return
 
         await saveCheckIn({
           goalId: goal.id,
@@ -130,19 +123,13 @@ export default function MyCheckins() {
           actualDate: goal.uom_type === 'timeline' ? data.actual_date : null,
           status: data.status || 'not_started'
         })
-        
-        await supabase
-          .from('check_ins')
-          .update({ computed_score: score })
-          .eq('goal_id', goal.id)
-          .eq('window_id', window.id)
       })
 
       await Promise.all(promises)
       
       await logEvent({
         action: 'UPDATE_PROGRESS',
-        description: `Employee updated progress for all goals in ${window.quarter}`
+        description: `Employee updated progress for goals in ${window.quarter}`
       })
 
       alert('All progress updates saved successfully!')
@@ -191,14 +178,36 @@ export default function MyCheckins() {
           <tbody>
             {goals.map(goal => {
               const current = checkins[goal.id] || {}
+              const goalHistory = historyCheckins.filter(h => h.goal_id === goal.id)
               return (
                 <tr key={goal.id}>
-                  <td style={{ maxWidth: '250px' }}>
+                  <td style={{ maxWidth: '300px', verticalAlign: 'top' }}>
                     <div style={{ fontWeight: 600 }}>{goal.title}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Weight: {goal.weightage}%</div>
-                    {current.manager_comment && (
-                      <div style={{ fontSize: '0.78rem', color: '#4f46e5', marginTop: '0.25rem', background: '#f5f3ff', padding: '0.2rem 0.4rem', borderRadius: '4px', borderLeft: '2px solid #8b5cf6' }}>
-                        💬 <em>Manager feedback:</em> "{current.manager_comment}"
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.35rem' }}>Weight: {goal.weightage}%</div>
+                    
+                    {/* Nested History Timeline */}
+                    {goalHistory.length > 0 && (
+                      <div style={{ marginTop: '0.75rem', borderTop: '1px dashed #e5e7eb', paddingTop: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: '0.35rem' }}>📜 Check-in & Comment History:</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {goalHistory.map(h => (
+                            <div key={h.id} style={{ fontSize: '0.72rem', background: '#f9fafb', padding: '0.35rem', borderRadius: '4px', borderLeft: '3px solid #6b7280' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#4b5563' }}>
+                                <span>{h.check_in_windows?.quarter || 'Check-in'}</span>
+                                <span className={`badge badge-${h.status}`} style={{ fontSize: '0.62rem', padding: '0.1rem 0.25rem' }}>{h.status.replace('_', ' ')}</span>
+                              </div>
+                              <div style={{ marginTop: '0.15rem' }}>
+                                <strong>Achievement:</strong> {h.actual_achievement !== null ? `${h.actual_achievement}` : (h.actual_date || 'N/A')}
+                                {h.computed_score !== null && ` (Score: ${Number(h.computed_score).toFixed(0)}%)`}
+                              </div>
+                              {h.manager_comment && (
+                                <div style={{ color: '#4f46e5', marginTop: '0.15rem', fontStyle: 'italic' }}>
+                                  💬 Manager: "{h.manager_comment}"
+                               </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </td>

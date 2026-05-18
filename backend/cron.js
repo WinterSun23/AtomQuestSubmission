@@ -1,12 +1,28 @@
 const cron = require('node-cron')
 const { enqueueNotificationJob } = require('./queue')
 
-// Mock email service
-const sendEmail = (to, subject, body) => {
-  console.log(`\n[MOCK EMAIL SENT]`)
-  console.log(`To: ${to}`)
-  console.log(`Subject: ${subject}`)
-  console.log(`Body: ${body}\n`)
+// Actual email service integration
+const { sendActualEmail } = require('./emailService')
+
+const sendEmail = async (to, subject, body, actionType = 'ESCALATION') => {
+  const htmlBody = `
+    <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
+      <h2 style="color: #DC2626;">🚨 Performance Portal System Alert</h2>
+      <p style="font-size: 16px; line-height: 1.5; color: #111;">${body}</p>
+      <div style="margin: 25px 0;">
+        <a href="http://localhost:5173/dashboard" style="background-color: #DC2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Open Portal Dashboard</a>
+      </div>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 12px; color: #888;">This is an automated administrative notification. Please do not reply directly.</p>
+    </div>
+  `
+  await sendActualEmail({
+    to,
+    subject,
+    htmlBody,
+    message: body,
+    actionType
+  })
 }
 
 async function runEscalations(supabase) {

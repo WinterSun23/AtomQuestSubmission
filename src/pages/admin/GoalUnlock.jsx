@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminLayout from '../../layouts/AdminLayout'
 import { searchLockedSheets, unlockGoalSheet } from '../../lib/adminApi'
 import { logEvent } from '../../lib/userApi'
@@ -11,9 +11,12 @@ export default function GoalUnlock() {
   const [reason, setReason] = useState('')
   const [unlocking, setUnlocking] = useState(false)
 
+  useEffect(() => {
+    handleSearch()
+  }, [])
+
   async function handleSearch(e) {
     if (e) e.preventDefault()
-    if (!query.trim()) return
     setLoading(true)
     try {
       const data = await searchLockedSheets(query)
@@ -32,7 +35,7 @@ export default function GoalUnlock() {
       
       await logEvent({
         action: 'RETURN_GOAL_SHEET',
-        actorId: selectedSheet.employee?.id,
+        goalSheetId: selectedSheet.id,
         reason: reason,
         description: `Admin unlocked your goal sheet: Reverted to draft. Reason: "${reason}"`
       })

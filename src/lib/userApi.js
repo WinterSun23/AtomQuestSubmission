@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { calculateProgressScore } from './scoreUtils'
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -208,13 +209,15 @@ export async function saveCheckIn({ goalId, windowId, actualAchievement, actualD
     .eq('id', goalId)
     .single()
 
-  // First check if it exists
-  const { data: existing } = await supabase
-    .from('check_ins')
-    .select('id')
-    .eq('goal_id', goalId)
-    .eq('window_id', windowId)
-    .maybeSingle()
+  if (!currentGoal) throw new Error('Goal not found')
+
+  const score = calculateProgressScore(
+    currentGoal.uom_type,
+    currentGoal.target,
+    actualAchievement,
+    actualDate,
+    currentGoal.target_date
+  )
 
   const payload = {
     goal_id: goalId,
@@ -222,27 +225,16 @@ export async function saveCheckIn({ goalId, windowId, actualAchievement, actualD
     actual_achievement: (actualAchievement !== undefined && actualAchievement !== null && actualAchievement !== '') ? actualAchievement : null,
     actual_date: (actualDate !== undefined && actualDate !== null && actualDate !== '') ? actualDate : null,
     status: status,
+    computed_score: score,
     updated_at: new Date().toISOString()
   }
 
-  if (existing) {
-    const { error } = await supabase.from('check_ins').update(payload).eq('id', existing.id)
-    if (error) throw error
-  } else {
-    const { error } = await supabase.from('check_ins').insert(payload)
-    if (error) throw error
-  }
+  // Always insert a new, independent check-in log entry
+  const { error } = await supabase.from('check_ins').insert(payload)
+  if (error) throw error
 
   // 2. If it is a shared goal, automatically sync achievements to matching siblings
-  if (currentGoal && currentGoal.is_shared) {
-    const score = calculateProgressScore(
-      currentGoal.uom_type,
-      currentGoal.target,
-      actualAchievement,
-      actualDate,
-      currentGoal.target_date
-    )
-
+  if (currentGoal.is_shared) {
     const { data: siblingGoals } = await supabase
       .from('goals')
       .select('id')
@@ -253,28 +245,16 @@ export async function saveCheckIn({ goalId, windowId, actualAchievement, actualD
 
     if (siblingGoals && siblingGoals.length > 0) {
       const promises = siblingGoals.map(async sibling => {
-        const { data: sibExisting } = await supabase
-          .from('check_ins')
-          .select('id')
-          .eq('goal_id', sibling.id)
-          .eq('window_id', windowId)
-          .maybeSingle()
-
         const sibPayload = {
           goal_id: sibling.id,
           window_id: windowId,
-          actual_achievement: (actualAchievement !== undefined && actualAchievement !== null && actualAchievement !== '') ? actualAchievement : null,
-          actual_date: (actualDate !== undefined && actualDate !== null && actualDate !== '') ? actualDate : null,
+          actual_achievement: payload.actual_achievement,
+          actual_date: payload.actual_date,
           status: status,
           computed_score: score,
           updated_at: new Date().toISOString()
         }
-
-        if (sibExisting) {
-          await supabase.from('check_ins').update(sibPayload).eq('id', sibExisting.id)
-        } else {
-          await supabase.from('check_ins').insert(sibPayload)
-        }
+        await supabase.from('check_ins').insert(sibPayload)
       })
       await Promise.all(promises)
     }

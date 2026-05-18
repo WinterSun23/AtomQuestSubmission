@@ -15,11 +15,12 @@ try {
     tls: url.protocol === 'rediss:' ? {} : undefined,
     // Add connection timeout properties
     connectTimeout: 10000,
-    maxRetriesPerRequest: null
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false
   }
 } catch (err) {
   console.warn(`[Queue] Failed to parse REDIS_URL, falling back to localhost connection:`, err.message)
-  connectionOpts = { host: '127.0.0.1', port: 6379, maxRetriesPerRequest: null }
+  connectionOpts = { host: '127.0.0.1', port: 6379, maxRetriesPerRequest: null, enableReadyCheck: false }
 }
 
 const notificationQueue = new Queue('notification-queue', {
