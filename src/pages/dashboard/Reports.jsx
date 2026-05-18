@@ -27,7 +27,7 @@ export default function Reports() {
   async function handleGenerateReport() {
     setLoading(true)
     try {
-      const data = await generateAchievementReport(null, null, quarter || null)
+      const data = await generateAchievementReport(null, quarter || null)
       if (data.url) {
         window.location.href = data.url // trigger download
       }

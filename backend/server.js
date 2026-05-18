@@ -140,15 +140,12 @@ const requireRole = (roles) => async (req, res, next) => {
 // Generate Achievement Report
 app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (req, res) => {
   try {
-    const { cycleId, departmentId, quarter } = req.query
+    const { cycleId, quarter } = req.query
     
     // Fetch base data
-    let usersQuery = supabase.from('users').select('id, name, department_id, departments(name)')
+    let usersQuery = supabase.from('users').select('id, name')
     if (req.user.role === 'manager') {
       usersQuery = usersQuery.eq('manager_id', req.user.id)
-    }
-    if (departmentId) {
-      usersQuery = usersQuery.eq('department_id', departmentId)
     }
     const { data: users, error: usersErr } = await usersQuery
     if (usersErr) throw usersErr
@@ -191,9 +188,8 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
     const sheet = workbook.addWorksheet(sheetTitle)
     sheet.columns = [
       { header: 'Employee', key: 'employee', width: 25 },
-      { header: 'Department', key: 'department', width: 25 },
-      { header: 'Goal Title', key: 'goal', width: 40 },
-      { header: 'Thrust Area', key: 'thrust_area', width: 20 },
+      { header: 'Goal Title', key: 'goal', width: 45 },
+      { header: 'Thrust Area', key: 'thrust_area', width: 22 },
       { header: 'UoM', key: 'uom', width: 15 },
       { header: 'Target', key: 'target', width: 15 },
       { header: 'Actual', key: 'actual', width: 15 },
@@ -216,7 +212,6 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
         
         sheet.addRow({
           employee: user?.name,
-          department: user?.departments?.name || '-',
           goal: g.title,
           thrust_area: g.thrust_areas?.name || '-',
           uom: g.uom_type,
@@ -229,11 +224,69 @@ app.get('/api/reports/achievement', requireRole(['admin', 'manager']), async (re
       })
     })
 
+    // ── Stylize the Excel Sheet for Corporate Branded UI ──
+    const headerRow = sheet.getRow(1)
+    headerRow.height = 30
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4F46E5' } // Branded Indigo Header
+      }
+      cell.font = {
+        name: 'Segoe UI',
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+        size: 11
+      }
+      cell.alignment = { vertical: 'middle', horizontal: 'center' }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        bottom: { style: 'medium', color: { argb: 'FF4F46E5' } },
+        left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+      }
+    })
+
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return
+      
+      row.height = 22
+      const isEven = rowNumber % 2 === 0
+      
+      row.eachCell((cell) => {
+        cell.font = {
+          name: 'Segoe UI',
+          size: 10,
+          color: { argb: 'FF333333' }
+        }
+        cell.alignment = { vertical: 'middle', horizontal: 'left' }
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          right: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+        }
+        
+        if (isEven) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF9FAFB' } // Zebra striping
+          }
+        }
+      })
+      
+      row.getCell('weightage').alignment = { horizontal: 'right', vertical: 'middle' }
+      row.getCell('score').alignment = { horizontal: 'right', vertical: 'middle' }
+      row.getCell('weighted_score').alignment = { horizontal: 'right', vertical: 'middle' }
+    })
+
     // Write to buffer
     const buffer = await workbook.xlsx.writeBuffer()
     
     // Create unique filename based on criteria to prevent duplicates
-    const fileName = `achievement_report_cycle_${cycleId || 'all'}_dept_${departmentId || 'all'}_quarter_${quarter || 'all'}_manager_${req.user.id}.xlsx`
+    const fileName = `achievement_report_cycle_${cycleId || 'all'}_quarter_${quarter || 'all'}_manager_${req.user.id}.xlsx`
     
     // Create scoped Supabase client with the user's JWT token
     const token = req.headers.authorization?.split(' ')[1]

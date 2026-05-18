@@ -5,20 +5,11 @@ import { getMyProfile } from './userApi'
 
 export async function getTeamGoalSheets(cycleId) {
   const me = await getMyProfile()
-  const { data, error } = await supabase
-    .from('goal_sheets')
-    .select(`
-      id, status, submitted_at,
-      employee:users!goal_sheets_employee_id_users_id_fk(id, name, department_id, departments(name))
-    `)
-    .eq('users.manager_id', me.id) // wait, users is joined, but we can't filter like this directly without a view.
-    // Let's filter after fetch, or use inner join if possible.
   
-  // Correction: We can fetch users where manager_id = me.id, then fetch their goal_sheets
   const { data: teamSheets, error: tsError } = await supabase
     .from('users')
     .select(`
-      id, name, departments(name),
+      id, name, email,
       goal_sheets:goal_sheets!goal_sheets_employee_id_users_id_fk (id, status, submitted_at, cycle_id)
     `)
     .eq('manager_id', me.id)
@@ -31,7 +22,7 @@ export async function getTeamGoalSheets(cycleId) {
     return {
       employeeId: user.id,
       employeeName: user.name,
-      department: user.departments?.name,
+      employeeEmail: user.email,
       sheetId: sheet?.id,
       status: sheet?.status || 'not_started',
       submittedAt: sheet?.submitted_at
@@ -130,7 +121,74 @@ export async function pushSharedGoal(goalData, employeeIds, cycleId) {
     return sheet
   }))
   
-  // 2. Insert the shared goals linked to these sheets
+  const newWeight = Number(goalData.weightage) || 10
+
+  // 2. Insert the shared goals linked to these sheets and balance existing goals
+  for (const sheet of sheets) {
+    const { data: existingGoals } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('goal_sheet_id', sheet.id)
+
+    if (existingGoals && existingGoals.length > 0) {
+      let goalsToScale = existingGoals.filter(g => !g.is_locked)
+      let otherGoals = existingGoals.filter(g => g.is_locked)
+
+      if (goalsToScale.length === 0) {
+        goalsToScale = existingGoals
+        otherGoals = []
+      }
+
+      const currentScaleSum = goalsToScale.reduce((s, g) => s + Number(g.weightage || 0), 0)
+      const otherSum = otherGoals.reduce((s, g) => s + Number(g.weightage || 0), 0)
+      const scaleTargetSum = Math.max(0, 100 - newWeight - otherSum)
+
+      if (currentScaleSum > 0) {
+        goalsToScale.forEach(g => {
+          const rawTarget = (Number(g.weightage) || 0) * (scaleTargetSum / currentScaleSum)
+          g.weightage = Math.max(10, Math.round(rawTarget))
+        })
+      } else {
+        const share = Math.max(10, Math.floor(scaleTargetSum / goalsToScale.length))
+        goalsToScale.forEach(g => {
+          g.weightage = share
+        })
+      }
+
+      // Rounding adjustment to make total exactly 100
+      let totalSum = goalsToScale.reduce((s, g) => s + g.weightage, 0) + otherSum + newWeight
+      let loops = 0
+      while (totalSum !== 100 && loops < 200) {
+        loops++
+        if (totalSum < 100) {
+          const targetGoal = goalsToScale[0]
+          if (targetGoal) {
+            targetGoal.weightage += 1
+            totalSum += 1
+          } else {
+            break
+          }
+        } else if (totalSum > 100) {
+          const targetGoal = goalsToScale.find(g => g.weightage > 10) || goalsToScale[0]
+          if (targetGoal) {
+            targetGoal.weightage -= 1
+            totalSum -= 1
+          } else {
+            break
+          }
+        }
+      }
+
+      // Save balanced existing goals back to database
+      for (const g of goalsToScale) {
+        await supabase
+          .from('goals')
+          .update({ weightage: g.weightage })
+          .eq('id', g.id)
+      }
+    }
+  }
+
   const toInsert = sheets.map(sheet => ({
     goal_sheet_id: sheet.id,
     thrust_area_id: goalData.thrust_area_id,
@@ -139,9 +197,9 @@ export async function pushSharedGoal(goalData, employeeIds, cycleId) {
     uom_type: goalData.uom_type,
     target: (goalData.target === '' || goalData.target === undefined) ? null : goalData.target,
     target_date: (goalData.target_date === '' || goalData.target_date === undefined) ? null : goalData.target_date,
-    weightage: goalData.weightage,
-    is_shared: true
-    // We could store shared_source_id if we created a template goal somewhere
+    weightage: newWeight,
+    is_shared: true,
+    is_locked: false // Explicitly starts as unlocked for the employee
   }))
   
   const { error } = await supabase.from('goals').insert(toInsert)
@@ -154,7 +212,7 @@ export async function getTeamCheckInsSummary(windowId) {
   const me = await getMyProfile()
   // Needs to list direct reports and their check-in completion status for the window.
   // Can be complex, for now we will just get the users and maybe fetch all checkins
-  const { data: team } = await supabase.from('users').select('id, name, departments(name)').eq('manager_id', me.id)
+  const { data: team } = await supabase.from('users').select('id, name').eq('manager_id', me.id)
   
   // fetch manager comments
   const { data: comments } = await supabase
@@ -166,7 +224,6 @@ export async function getTeamCheckInsSummary(windowId) {
   return team.map(t => ({
     employeeId: t.id,
     employeeName: t.name,
-    department: t.departments?.name,
     hasComment: comments.some(c => c.employee_id === t.id)
   }))
 }
@@ -190,6 +247,10 @@ export async function getQuarterlyTeamStats(quarter) {
   // 1. Get active cycle
   const { data: activeCycle } = await supabase.from('cycles').select('id').eq('is_active', true).maybeSingle()
   if (!activeCycle) return null
+
+  if (quarter === 'phase1') {
+    return { total: 0, completed: 0, avgScore: 0 }
+  }
 
   // 2. Get window_id for the quarter safely
   const { data: windows } = await supabase

@@ -8,6 +8,7 @@ const NAV = [
     section: 'Overview',
     items: [
       { id: 'dashboard',   label: 'Dashboard',     icon: '📊', path: '/admin' },
+      { id: 'reports',     label: 'Reports',       icon: '📈', path: '/admin/reports' },
     ],
   },
   {

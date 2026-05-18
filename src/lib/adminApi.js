@@ -23,7 +23,7 @@ export async function updateSetting(key, value) {
 export async function getAllUsers() {
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, email, role, manager_id, department_id, created_at')
+    .select('id, name, email, role, manager_id, created_at')
     .order('name')
   if (error) throw error
   return data

@@ -12,15 +12,14 @@ export default function NotificationPrefs() {
   const [minEmailSeverity, setMinEmailSeverity] = useState('low')
   const [minTeamsSeverity, setMinTeamsSeverity] = useState('low')
   const [reminderDays, setReminderDays] = useState(3)
-  const [notifications, setNotifications] = useState([])
 
   useEffect(() => {
     if (me) {
-      loadPreferencesAndNotifications()
+      loadPreferences()
     }
   }, [contextLoading, me])
 
-  async function loadPreferencesAndNotifications() {
+  async function loadPreferences() {
     setLoading(true)
     try {
       // Fetch preferences using the internal profile ID (me.id)
@@ -36,17 +35,6 @@ export default function NotificationPrefs() {
         setReminderDays(prefs.reminder_days_before)
         setMinEmailSeverity(prefs.min_email_severity || 'low')
         setMinTeamsSeverity(prefs.min_teams_severity || 'low')
-      }
-
-      // Fetch in-app notifications using me.id
-      const { data: list } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', me.id)
-        .order('created_at', { ascending: false })
-      
-      if (list) {
-        setNotifications(list)
       }
     } catch (err) {
       console.error('Error loading preferences:', err)
@@ -78,34 +66,7 @@ export default function NotificationPrefs() {
     setSaving(false)
   }
 
-  async function handleMarkAllRead() {
-    if (!me) return
-    if (!confirm('Are you sure you want to clear all alerts?')) return
-    try {
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('user_id', me.id)
-      
-      setNotifications([])
-      alert('All alerts cleared successfully!')
-    } catch (err) {
-      console.error(err)
-    }
-  }
 
-  async function handleDeleteNotification(id) {
-    try {
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id)
-      
-      setNotifications(prev => prev.filter(n => n.id !== id))
-    } catch (err) {
-      console.error('Error deleting notification:', err)
-    }
-  }
 
   if (loading) return <div className="user-empty">Loading settings...</div>
 
@@ -224,83 +185,6 @@ export default function NotificationPrefs() {
         >
           {saving ? 'Saving...' : 'Save Settings'}
         </button>
-      </div>
-
-      <div className="user-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#111827' }}>
-            🔔 Recent In-App Alerts
-          </h3>
-          {notifications.length > 0 && (
-            <button
-              id="btn-mark-all-read"
-              onClick={handleMarkAllRead}
-              style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
-            >
-              Clear all alerts
-            </button>
-          )}
-        </div>
-
-        {notifications.length === 0 ? (
-          <div className="user-empty" style={{ padding: '2rem' }}>
-            You have no notifications at this time.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {notifications.map(n => (
-              <div
-                key={n.id}
-                style={{
-                  padding: '1rem',
-                  background: n.is_read ? '#f9fafb' : '#f0f0ff',
-                  border: n.is_read ? '1px solid #e5e7eb' : '1px solid #c7d2fe',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: n.is_read ? 500 : 700, color: '#1f2937', marginBottom: '0.25rem' }}>
-                    {n.message}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                    {new Date(n.created_at).toLocaleString()}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  {n.link && (
-                    <a
-                      href={n.link}
-                      style={{ fontSize: '0.85rem', color: '#4f46e5', fontWeight: 600, textDecoration: 'none' }}
-                    >
-                      View Details →
-                    </a>
-                  )}
-                  <button
-                    onClick={() => handleDeleteNotification(n.id)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#ef4444',
-                      fontSize: '1rem',
-                      cursor: 'pointer',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title="Dismiss alert"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )

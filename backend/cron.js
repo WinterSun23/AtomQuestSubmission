@@ -108,6 +108,130 @@ async function runEscalations(supabase) {
       }
     }
 
+    // 4. Escalation: Employee has not completed check-ins within N days of check-in window opening (E3)
+    const { data: activeWindows } = await supabase.from('check_in_windows')
+      .select('*')
+      .eq('cycle_id', cycles.id)
+    
+    if (activeWindows) {
+      for (const w of activeWindows) {
+        const winDiff = getDiff(today, new Date(w.window_open))
+        if (winDiff > deadline) {
+          // Find employees with approved goal sheets
+          const { data: approvedSheets } = await supabase.from('goal_sheets')
+            .select('employee_id, users!goal_sheets_employee_id_users_id_fk(id, name, email)')
+            .eq('status', 'approved')
+            .eq('cycle_id', cycles.id)
+          
+          if (approvedSheets) {
+            for (const sheet of approvedSheets) {
+              if (!sheet.users) continue
+              
+              // Fetch goals for this employee sheet
+              const { data: empGoals } = await supabase.from('goals')
+                .select('id')
+                .eq('goal_sheet_id', sheet.employee_id)
+              
+              const goalIds = empGoals?.map(g => g.id) || []
+              let hasCheckins = false
+              if (goalIds.length > 0) {
+                const { data: cIn } = await supabase.from('check_ins')
+                  .select('id')
+                  .eq('window_id', w.id)
+                  .in('goal_id', goalIds)
+                if (cIn && cIn.length > 0) hasCheckins = true
+              }
+              
+              if (!hasCheckins) {
+                await triggerEscalation(supabase, {
+                  employeeId: sheet.users.id,
+                  ruleId: 'E3',
+                  escalationLevel: '1',
+                  notifiedUserId: sheet.users.id,
+                  message: `Employee ${sheet.users.name} has not completed check-ins for ${w.quarter}`,
+                  emailTo: sheet.users.email,
+                  emailSubject: `Action Required: Complete ${w.quarter} Check-ins`,
+                  emailBody: `The check-in window for ${w.quarter} opened more than ${deadline} ${unit} ago. Please update your achievements. Link: /dashboard/my-checkins`
+                })
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Escalation: Manager review/comment overdue for check-in (E4)
+    if (activeWindows) {
+      for (const w of activeWindows) {
+        // Find check-ins in this window
+        const { data: windowCheckins } = await supabase.from('check_ins')
+          .select(`
+            id, updated_at,
+            goals!check_ins_goal_id_goals_id_fk(
+              goal_sheet_id,
+              goal_sheets!goals_goal_sheet_id_goal_sheets_id_fk(
+                employee_id,
+                users!goal_sheets_employee_id_users_id_fk(id, name, manager_id)
+              )
+            )
+          `)
+          .eq('window_id', w.id)
+
+        if (windowCheckins) {
+          // Group check-ins by employee
+          const empMap = new Map()
+          for (const c of windowCheckins) {
+            const empUser = c.goals?.goal_sheets?.users
+            if (!empUser || !empUser.manager_id) continue
+            
+            if (!empMap.has(empUser.id)) {
+              empMap.set(empUser.id, {
+                user: empUser,
+                lastUpdate: new Date(c.updated_at)
+              })
+            } else {
+              const current = empMap.get(empUser.id)
+              if (new Date(c.updated_at) > current.lastUpdate) {
+                current.lastUpdate = new Date(c.updated_at)
+              }
+            }
+          }
+
+          for (const [empId, info] of empMap.entries()) {
+            const checkinDiff = getDiff(today, info.lastUpdate)
+            if (checkinDiff > deadline) {
+              // Check if manager commented for this window & employee
+              const { data: comments } = await supabase.from('manager_comments')
+                .select('id')
+                .eq('employee_id', empId)
+                .eq('window_id', w.id)
+                .limit(1)
+
+              if (!comments || comments.length === 0) {
+                const { data: manager } = await supabase.from('users')
+                  .select('id, name, email')
+                  .eq('id', info.user.manager_id)
+                  .single()
+                
+                if (manager) {
+                  await triggerEscalation(supabase, {
+                    employeeId: empId,
+                    ruleId: 'E4',
+                    escalationLevel: '1',
+                    notifiedUserId: manager.id,
+                    message: `Manager ${manager.name} has overdue check-in reviews for ${info.user.name} (${w.quarter})`,
+                    emailTo: manager.email,
+                    emailSubject: 'Action Required: Complete Check-in Review',
+                    emailBody: `You have pending check-in reviews for ${info.user.name} in ${w.quarter} that are over ${deadline} ${unit} old. Link: /dashboard/team-checkins`
+                  })
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     console.log('[Cron] Escalation Engine completed.')
   } catch (err) {
     console.error('[Cron] Error running escalations:', err)

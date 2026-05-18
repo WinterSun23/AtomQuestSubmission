@@ -150,7 +150,7 @@ export default function Login() {
           {[
             'Set and approve goals with full audit trail',
             'Quarterly check-ins with computed progress scores',
-            'Shared departmental KPIs across your team',
+            'Shared goal KPIs across your team',
             'Microsoft Teams bot for instant updates',
           ].map(f => (
             <div className="brand-feature" key={f}>

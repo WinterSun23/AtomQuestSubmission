@@ -62,49 +62,73 @@ export async function createGoalSheet(cycleId) {
 }
 
 export async function saveGoals(sheetId, goals) {
-  // We need to upsert goals. Since UI might remove goals, we can just delete and recreate, 
-  // or use upsert + delete missing. For simplicity, if status is draft/returned, 
-  // we delete all existing non-shared goals and insert the new ones.
-  // Actually, better to just upsert and delete missing.
-
   const { data: sheet } = await supabase.from('goal_sheets').select('status').eq('id', sheetId).single()
-  if (sheet.status === 'submitted' || sheet.status === 'approved') {
+  const { data: dbGoals } = await supabase.from('goals').select('*').eq('goal_sheet_id', sheetId)
+
+  const unlockedSharedDbIds = dbGoals.filter(dg => dg.is_shared && !dg.is_locked).map(dg => dg.id)
+  const isSheetLocked = sheet.status === 'submitted' || sheet.status === 'approved'
+  
+  if (isSheetLocked && unlockedSharedDbIds.length === 0) {
     throw new Error('Cannot edit goals after submission')
-  }
-
-  // Find existing goals to see what to delete
-  const { data: existingGoals } = await supabase.from('goals').select('id, is_shared').eq('goal_sheet_id', sheetId)
-
-  const incomingIds = goals.map(g => g.id).filter(Boolean)
-  const toDelete = existingGoals.filter(eg => !eg.is_shared && !incomingIds.includes(eg.id)).map(eg => eg.id)
-
-  if (toDelete.length > 0) {
-    await supabase.from('goals').delete().in('id', toDelete)
   }
 
   const toUpdate = []
   const toInsert = []
 
-  goals.forEach(g => {
-    const payload = {
-      goal_sheet_id: sheetId,
-      thrust_area_id: g.thrust_area_id,
-      title: g.title,
-      description: g.description,
-      uom_type: g.uom_type,
-      target: g.target || null,
-      target_date: g.target_date || null,
-      weightage: g.weightage,
-      is_shared: g.is_shared || false,
-      updated_at: new Date().toISOString()
+  if (isSheetLocked) {
+    // ONLY allow updating weightage of unlocked shared goals!
+    goals.forEach(g => {
+      if (g.id && unlockedSharedDbIds.includes(g.id)) {
+        const dbGoal = dbGoals.find(dg => dg.id === g.id)
+        toUpdate.push({
+          id: g.id,
+          goal_sheet_id: sheetId,
+          thrust_area_id: dbGoal.thrust_area_id,
+          title: dbGoal.title,
+          description: dbGoal.description,
+          uom_type: dbGoal.uom_type,
+          target: dbGoal.target,
+          target_date: dbGoal.target_date,
+          weightage: g.weightage,
+          is_shared: true,
+          is_locked: true, // Now it becomes locked!
+          updated_at: new Date().toISOString()
+        })
+      }
+    })
+  } else {
+    // Draft / Returned state: standard flow
+    const incomingIds = goals.map(g => g.id).filter(Boolean)
+    const toDeleteIds = dbGoals.filter(eg => !eg.is_shared && !incomingIds.includes(eg.id)).map(eg => eg.id)
+
+    if (toDeleteIds.length > 0) {
+      await supabase.from('goals').delete().in('id', toDeleteIds)
     }
 
-    if (g.id) {
-      toUpdate.push({ ...payload, id: g.id })
-    } else {
-      toInsert.push(payload)
-    }
-  })
+    goals.forEach(g => {
+      const isSharedUnlocked = g.is_shared && dbGoals.find(dg => dg.id === g.id && !dg.is_locked)
+      
+      const payload = {
+        goal_sheet_id: sheetId,
+        thrust_area_id: g.thrust_area_id,
+        title: g.title,
+        description: g.description,
+        uom_type: g.uom_type,
+        target: g.target || null,
+        target_date: g.target_date || null,
+        weightage: g.weightage,
+        is_shared: g.is_shared || false,
+        is_locked: isSharedUnlocked ? true : (g.is_locked || false),
+        updated_at: new Date().toISOString()
+      }
+
+      if (g.id) {
+        toUpdate.push({ ...payload, id: g.id })
+      } else {
+        toInsert.push(payload)
+      }
+    })
+  }
 
   if (toUpdate.length > 0) {
     const { error: updateErr } = await supabase.from('goals').upsert(toUpdate)
@@ -153,6 +177,10 @@ export async function getActiveCheckInWindow(cycleId) {
   const auto = settings?.find(s => s.key === 'auto_active_quarter')?.value
 
   let currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
+
+  if (currentQ === 'phase1') {
+    return null
+  }
 
   let { data: windows, error } = await supabase
     .from('check_in_windows')

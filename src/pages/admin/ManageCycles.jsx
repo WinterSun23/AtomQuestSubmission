@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../../layouts/AdminLayout'
 import { getCycles, createCycle, activateCycle, getAllSettings, updateSetting } from '../../lib/adminApi'
-import { generateAchievementReport, triggerBackgroundCron } from '../../lib/backendApi'
 
 export default function ManageCycles() {
   const [cycles,  setCycles]  = useState([])
@@ -13,14 +12,6 @@ export default function ManageCycles() {
   const [settings, setSettings] = useState([])
   const [quarterOverride, setQuarterOverride] = useState('')
   const [autoQuarter, setAutoQuarter] = useState('')
-  
-  // Reports
-  const [reportQuarter, setReportQuarter] = useState('')
-  const [generatingReport, setGeneratingReport] = useState(false)
-
-  // Background Jobs
-  const [triggeringCron, setTriggeringCron] = useState(false)
-  const [cronStatus, setCronStatus] = useState('')
  
   async function load() {
     const [cyc, sets] = await Promise.all([getCycles(), getAllSettings()])
@@ -58,35 +49,6 @@ export default function ManageCycles() {
     }
   }
  
-  async function handleGenerateReport() {
-    setGeneratingReport(true)
-    try {
-      const data = await generateAchievementReport(null, null, reportQuarter || null)
-      if (data.url) {
-        window.location.href = data.url // trigger download
-      }
-    } catch (err) {
-      alert('Error: ' + err.message)
-    } finally {
-      setGeneratingReport(false)
-    }
-  }
-
-  async function handleTriggerCron() {
-    setTriggeringCron(true)
-    setCronStatus('Running checks & calculations...')
-    try {
-      const data = await triggerBackgroundCron()
-      setCronStatus(`Success: ${data.message || 'Escalations scanned and quarters updated.'}`)
-      alert('Background cron job executed successfully!')
-    } catch (err) {
-      setCronStatus(`Error: ${err.message}`)
-      alert('Error triggering background cron: ' + err.message)
-    } finally {
-      setTriggeringCron(false)
-    }
-  }
- 
   const activeQ = (quarterOverride && quarterOverride !== 'auto') ? quarterOverride : autoQuarter
 
   return (
@@ -102,7 +64,7 @@ export default function ManageCycles() {
           <div className="admin-card-title">Quarter Management</div>
           <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#f3f4f6', borderRadius: '8px' }}>
             <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Currently Active Quarter</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#4f46e5' }}>{activeQ}</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#4f46e5' }}>{activeQ === 'phase1' ? 'Goal Setting (Phase 1)' : activeQ}</div>
             {quarterOverride && quarterOverride !== 'auto' && (
               <span className="badge badge-draft" style={{ marginTop: '0.25rem' }}>Manual Override</span>
             )}
@@ -112,6 +74,7 @@ export default function ManageCycles() {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <select className="admin-select" value={quarterOverride} onChange={e => setQuarterOverride(e.target.value)} style={{ flex: 1 }}>
               <option value="">Auto (Cron Job)</option>
+              <option value="phase1">Goal Setting (Phase 1)</option>
               <option value="Q1">Q1</option>
               <option value="Q2">Q2</option>
               <option value="Q3">Q3</option>
@@ -119,63 +82,6 @@ export default function ManageCycles() {
             </select>
             <button className="btn-sm btn-primary-sm" onClick={handleSaveOverride}>Save</button>
           </div>
-        </div>
-
-        {/* ── Org Reports ── */}
-        <div className="admin-card" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div className="admin-card-title">Org Achievement Report</div>
-            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-              Download an Excel report containing all employee achievements.
-            </p>
-            <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.25rem' }}>Filter by Quarter</label>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-              <select className="admin-select" value={reportQuarter} onChange={e => setReportQuarter(e.target.value)} style={{ flex: 1, boxSizing: 'border-box' }}>
-                <option value="">All Quarters</option>
-                <option value="Q1">Q1</option>
-                <option value="Q2">Q2</option>
-                <option value="Q3">Q3</option>
-                <option value="Q4">Q4</option>
-              </select>
-            </div>
-          </div>
-          <button className="btn-sm btn-success-sm" onClick={handleGenerateReport} disabled={generatingReport}>
-            {generatingReport ? 'Generating...' : 'Generate Excel Report'}
-          </button>
-        </div>
-
-        {/* ── Background Jobs Controller (QOL 1) ── */}
-        <div className="admin-card" style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div className="admin-card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              ⚙️ Background Jobs
-            </div>
-            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
-              Manually trigger active quarter transitions and scan employee sheets for late escalation alerts.
-            </p>
-            {cronStatus && (
-              <div style={{
-                padding: '0.6rem 0.8rem',
-                background: cronStatus.startsWith('Error') ? '#fef2f2' : '#f0fdf4',
-                color: cronStatus.startsWith('Error') ? '#991b1b' : '#166534',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                marginBottom: '1rem',
-                border: `1px solid ${cronStatus.startsWith('Error') ? '#fca5a5' : '#bbf7d0'}`,
-                fontWeight: 500
-              }}>
-                {cronStatus}
-              </div>
-            )}
-          </div>
-          <button 
-            className="btn-sm btn-primary-sm" 
-            onClick={handleTriggerCron} 
-            disabled={triggeringCron}
-            style={{ width: '100%' }}
-          >
-            {triggeringCron ? 'Executing Cron Pipeline...' : 'Run Background Cron Tasks Now'}
-          </button>
         </div>
       </div>
 
@@ -205,7 +111,7 @@ export default function ManageCycles() {
               </div>
               {cycle.is_active && (
                 <div style={{ fontSize: '0.78rem', color: '#4f46e5', marginTop: 4, fontWeight: 500 }}>
-                  Active Quarter: {activeQ}
+                  Active Quarter: {activeQ === 'phase1' ? 'Goal Setting (Phase 1)' : activeQ}
                 </div>
               )}
             </div>

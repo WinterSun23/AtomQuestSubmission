@@ -17,7 +17,3 @@ Integrates with existing tools (Jira, Salesforce, GitHub, analytics dashboards)
 Pre-fills "Actual Achievement" based on live data
 Employee just reviews and confirms rather than manual entry
 Reduces data entry errors and saves time
-
-Schema update process
-npx drizzle-kit generate
-supabase db push

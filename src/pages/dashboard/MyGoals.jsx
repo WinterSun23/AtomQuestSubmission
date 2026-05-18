@@ -90,6 +90,75 @@ export default function MyGoals() {
     setGoals(newGoals)
   }
 
+  function adjustWeightages(changedGoal, newWeightVal) {
+    let newWeight = Math.max(0, Math.min(100, Number(newWeightVal) || 0))
+    
+    const absoluteIndex = goals.indexOf(changedGoal)
+    if (absoluteIndex === -1) return
+
+    const newGoals = goals.map(g => ({ ...g }))
+    newGoals[absoluteIndex].weightage = newWeight
+
+    // Determine if the changed goal is part of the 100% validation pool
+    const isValidationGoal = sharedGoalsMode === 'special' ? !changedGoal.is_shared : true
+
+    // If not in the validation pool (e.g. editing a shared goal in special mode), just set and exit
+    if (!isValidationGoal) {
+      setGoals(newGoals)
+      return
+    }
+
+    // Find other goals that are in the validation pool to borrow/lend from
+    const otherValidationGoals = newGoals.filter((g, idx) => {
+      if (idx === absoluteIndex) return false
+      return sharedGoalsMode === 'special' ? !g.is_shared : true
+    })
+
+    if (otherValidationGoals.length === 0) {
+      newGoals[absoluteIndex].weightage = 100
+      setGoals(newGoals)
+      return
+    }
+
+    // Solve and enforce min weight constraint!
+    const N = otherValidationGoals.length + 1 // Total validation goals
+    const maxAllowed = 100 - (N - 1) * minGoalWeightage
+    newWeight = Math.max(minGoalWeightage, Math.min(newWeight, maxAllowed))
+
+    newGoals[absoluteIndex].weightage = newWeight
+
+    const targetOtherSum = 100 - newWeight
+    const currentOtherSum = otherValidationGoals.reduce((sum, g) => sum + (Number(g.weightage) || 0), 0)
+
+    let delta = targetOtherSum - currentOtherSum
+    let loops = 0
+
+    while (delta !== 0 && loops < 1000) {
+      loops++
+      if (delta > 0) {
+        // Need to add weightage: increment any other goal
+        const targetGoal = otherValidationGoals[0]
+        if (targetGoal) {
+          targetGoal.weightage = (Number(targetGoal.weightage) || 0) + 1
+          delta -= 1
+        } else {
+          break
+        }
+      } else {
+        // Need to subtract weightage: decrement any goal that is currently above minGoalWeightage
+        const targetGoal = otherValidationGoals.find(g => (Number(g.weightage) || 0) > minGoalWeightage) || otherValidationGoals[0]
+        if (targetGoal) {
+          targetGoal.weightage = (Number(targetGoal.weightage) || 0) - 1
+          delta += 1
+        } else {
+          break
+        }
+      }
+    }
+
+    setGoals(newGoals)
+  }
+
   async function handleSaveDraft() {
     try {
       await saveGoals(sheet.id, goals)
@@ -125,6 +194,8 @@ export default function MyGoals() {
   }
 
   const isEditable = sheet && (sheet.status === 'draft' || sheet.status === 'returned')
+  const hasUnlockedGoals = goals.some(g => g.is_locked === false)
+  const canEmployeeEdit = isEditable || hasUnlockedGoals
   
   const personalGoals = goals.filter(g => !g.is_shared)
   const sharedGoals = goals.filter(g => g.is_shared)
@@ -141,7 +212,7 @@ export default function MyGoals() {
   const isSheetValid = totalWeight === 100 && !anyUnderMin && !exceedsCount && !zeroGoals && !hasEmptyFields
 
   function ValidationBanner() {
-    if (!isEditable) return null
+    if (!canEmployeeEdit) return null
 
     return (
       <div style={{
@@ -182,6 +253,49 @@ export default function MyGoals() {
 
   return (
     <div>
+      <style>{`
+        .checkin-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+          margin-top: 1rem;
+        }
+        .checkin-card {
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 1.5rem;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 200px;
+        }
+        .checkin-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+          border-color: #4f46e5;
+        }
+        .checkin-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 4px;
+          height: 100%;
+          background: #e5e7eb;
+          transition: background 0.3s ease;
+        }
+        .checkin-card.active-completed::before { background: #10b981; }
+        .checkin-card.active-on_track::before { background: #3b82f6; }
+        .checkin-card.active-draft::before { background: #cbd5e1; }
+        .checkin-card.active-rework::before { background: #f59e0b; }
+      `}</style>
       <div className="user-page-header">
         <h1 className="user-page-title">My Goals</h1>
         <p className="user-page-subtitle">Cycle: {cycle.name}</p>
@@ -207,7 +321,7 @@ export default function MyGoals() {
         <div className="user-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h2 className="user-card-title" style={{ margin: 0 }}>Goal Sheet Status: <span className={`badge badge-${sheet.status}`}>{sheet.status.replace('_', ' ')}</span></h2>
-            {isEditable && (
+            {canEmployeeEdit && (
               <div style={{ fontSize: '0.85rem', fontWeight: 600, color: totalWeight === 100 ? '#15803d' : '#b91c1c' }}>
                 Total Weightage: {totalWeight}% / 100%
               </div>
@@ -226,109 +340,185 @@ export default function MyGoals() {
             {/* ── Personal Goals Section ── */}
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#374151', marginBottom: '1rem', marginTop: 0 }}>Personal Goals</h3>
-              {personalGoals.length === 0 ? (
-                <div className="user-empty" style={{ padding: '2rem' }}>No personal goals added yet.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {personalGoals.map((goal, i) => (
-                    <div key={`personal-${i}`} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#fff' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <h4 style={{ margin: 0, color: '#111827' }}>Goal #{i + 1}</h4>
-                        {isEditable && (
-                          <button className="btn-sm btn-danger-sm" onClick={() => removeGoalByObject(goal)}>Remove</button>
-                        )}
-                      </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                {personalGoals.map((goal, i) => {
+                  const isLocked = !canEmployeeEdit || goal.is_locked || !isEditable;
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  if (isLocked) {
+                    return (
+                      <div 
+                        key={`personal-${i}`} 
+                        className="checkin-card active-on_track" 
+                        style={{ cursor: 'default', minHeight: 'auto' }}
+                      >
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
-                          <input 
-                            type="text" 
-                            className="user-input" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.title} 
-                            onChange={e => updateGoalByObject(goal, 'title', e.target.value)}
-                            disabled={!isEditable}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
-                          <select 
-                            className="user-select" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.thrust_area_id || ''}
-                            onChange={e => updateGoalByObject(goal, 'thrust_area_id', e.target.value)}
-                            disabled={!isEditable}
-                          >
-                            {thrustAreas.map(ta => <option key={ta.id} value={ta.id}>{ta.name}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ gridColumn: '1 / -1' }}>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
-                          <textarea 
-                            className="user-input" 
-                            style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
-                            value={goal.description || ''} 
-                            onChange={e => updateGoalByObject(goal, 'description', e.target.value)}
-                            disabled={!isEditable}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
-                          <select 
-                            className="user-select" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.uom_type}
-                            onChange={e => updateGoalByObject(goal, 'uom_type', e.target.value)}
-                            disabled={!isEditable}
-                          >
-                            {UOM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#3b82f6', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              👤 Personal Goal #{i + 1} {goal.is_locked && '(Locked)'}
+                            </span>
+                          </div>
+                          
+                          <h4 style={{ fontSize: '0.98rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#111827' }}>
+                            {goal.title}
+                          </h4>
+                          <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 0.75rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                            {goal.description || 'No description provided.'}
+                          </p>
                         </div>
                         
-                        {goal.uom_type === 'timeline' ? (
+                        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                            <span>Target: <strong>{goal.target_date || goal.target || '-'}</strong></span>
+                            <span>Weightage: <strong>{goal.weightage}%</strong></span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.72rem', color: '#6b7280', background: '#f9fafb', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                            <div>📌 <strong>Thrust Area:</strong> {thrustAreas.find(ta => ta.id === goal.thrust_area_id)?.name || 'Thrust Area'}</div>
+                            <div>📊 <strong>UoM Type:</strong> {goal.uom_type.replace('_', ' ')}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={`personal-${i}`} className="checkin-card active-on_track" style={{ cursor: 'default', minHeight: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                          <h4 style={{ margin: 0, color: '#111827', fontSize: '0.98rem', fontWeight: 700 }}>Goal #{i + 1}</h4>
+                          <button className="btn-sm btn-danger-sm" onClick={() => removeGoalByObject(goal)}>Remove</button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
                             <input 
-                              type="date" 
+                              type="text" 
                               className="user-input" 
                               style={{ width: '100%', boxSizing: 'border-box' }}
-                              value={goal.target_date || ''} 
-                              onChange={e => updateGoalByObject(goal, 'target_date', e.target.value)}
-                              disabled={!isEditable}
+                              value={goal.title} 
+                              onChange={e => updateGoalByObject(goal, 'title', e.target.value)}
                             />
                           </div>
-                        ) : (
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
+                            <select 
+                              className="user-select" 
+                              style={{ width: '100%', boxSizing: 'border-box' }}
+                              value={goal.thrust_area_id || ''}
+                              onChange={e => updateGoalByObject(goal, 'thrust_area_id', e.target.value)}
+                            >
+                              {thrustAreas.map(ta => <option key={ta.id} value={ta.id}>{ta.name}</option>)}
+                            </select>
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
+                            <textarea 
+                              className="user-input" 
+                              style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
+                              value={goal.description || ''} 
+                              onChange={e => updateGoalByObject(goal, 'description', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
+                            <select 
+                              className="user-select" 
+                              style={{ width: '100%', boxSizing: 'border-box' }}
+                              value={goal.uom_type}
+                              onChange={e => updateGoalByObject(goal, 'uom_type', e.target.value)}
+                            >
+                              {UOM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
+                          </div>
+                          
+                          {goal.uom_type === 'timeline' ? (
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
+                              <input 
+                                type="date" 
+                                className="user-input" 
+                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                value={goal.target_date || ''} 
+                                onChange={e => updateGoalByObject(goal, 'target_date', e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
+                              <input 
+                                type="number" 
+                                className="user-input" 
+                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                value={goal.target || ''} 
+                                onChange={e => updateGoalByObject(goal, 'target', e.target.value)}
+                              />
+                            </div>
+                          )}
+                          
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
                             <input 
                               type="number" 
                               className="user-input" 
                               style={{ width: '100%', boxSizing: 'border-box' }}
-                              value={goal.target || ''} 
-                              onChange={e => updateGoalByObject(goal, 'target', e.target.value)}
-                              disabled={!isEditable}
+                              defaultValue={goal.weightage}
+                              key={`personal-weight-${goal.id || i}-${goal.weightage}`}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  adjustWeightages(goal, e.target.value)
+                                  e.target.blur()
+                                }
+                              }}
+                              onBlur={e => {
+                                adjustWeightages(goal, e.target.value)
+                              }}
+                              min={minGoalWeightage} max="100"
                             />
                           </div>
-                        )}
-                        
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
-                          <input 
-                            type="number" 
-                            className="user-input" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.weightage} 
-                            onChange={e => updateGoalByObject(goal, 'weightage', e.target.value)}
-                            disabled={!isEditable}
-                            min={minGoalWeightage} max="100"
-                          />
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+
+                {canEmployeeEdit && isEditable && goals.length < maxGoalsPerSheet && (
+                  <div 
+                    onClick={addGoal}
+                    style={{
+                      border: '2px dashed #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '1.5rem',
+                      background: '#f8fafc',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      minHeight: '280px',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = '#4f46e5'
+                      e.currentTarget.style.background = '#f5f3ff'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = '#cbd5e1'
+                      e.currentTarget.style.background = '#f8fafc'
+                    }}
+                  >
+                    <span style={{ fontSize: '2.5rem', color: '#94a3b8', marginBottom: '0.5rem' }}>+</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#6b7280' }}>Add Personal Goal</span>
+                    <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                      ({goals.length} of {maxGoalsPerSheet} goals)
+                    </span>
+                  </div>
+                )}
+
+                {(!canEmployeeEdit || !isEditable || goals.length >= maxGoalsPerSheet) && personalGoals.length === 0 && (
+                  <div className="user-empty" style={{ padding: '2rem', gridColumn: '1 / -1' }}>No personal goals added yet.</div>
+                )}
+              </div>
             </div>
 
             {/* ── Shared Goals Section ── */}
@@ -340,104 +530,158 @@ export default function MyGoals() {
                 <p style={{ fontSize: '0.82rem', color: '#6b7280', marginBottom: '1.25rem' }}>
                   These organization or team-level shared goals are configured by your manager. They do not count toward your personal goal limits.
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {sharedGoals.map((goal, i) => (
-                    <div key={`shared-${i}`} style={{ border: '1.5px dashed #94a3b8', borderRadius: '8px', padding: '1rem', background: '#f8fafc' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <h4 style={{ margin: 0, color: '#475569' }}>Shared Goal Details</h4>
-                        <span className="badge badge-draft" style={{ background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe' }}>Shared</span>
-                      </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                  {sharedGoals.map((goal, i) => {
+                    const isLocked = !canEmployeeEdit || goal.is_locked;
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
-                          <input 
-                            type="text" 
-                            className="user-input" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.title} 
-                            disabled
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
-                          <select 
-                            className="user-select" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.thrust_area_id || ''}
-                            disabled
-                          >
-                            {thrustAreas.map(ta => <option key={ta.id} value={ta.id}>{ta.name}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ gridColumn: '1 / -1' }}>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
-                          <textarea 
-                            className="user-input" 
-                            style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
-                            value={goal.description || ''} 
-                            disabled
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
-                          <select 
-                            className="user-select" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.uom_type}
-                            disabled
-                          >
-                            {UOM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </div>
-                        
-                        {goal.uom_type === 'timeline' ? (
+                    if (isLocked) {
+                      return (
+                        <div 
+                          key={`shared-${i}`} 
+                          className="checkin-card active-completed" 
+                          style={{ cursor: 'default', minHeight: 'auto' }}
+                        >
                           <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
-                            <input 
-                              type="date" 
-                              className="user-input" 
-                              style={{ width: '100%', boxSizing: 'border-box' }}
-                              value={goal.target_date || ''} 
-                              disabled
-                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                              <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                👥 Shared Goal #{i + 1}
+                              </span>
+                            </div>
+                            
+                            <h4 style={{ fontSize: '0.98rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#111827' }}>
+                              {goal.title}
+                            </h4>
+                            <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 0.75rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                              {goal.description || 'No description provided.'}
+                            </p>
                           </div>
-                        ) : (
-                          <div>
-                            <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
-                            <input 
-                              type="number" 
-                              className="user-input" 
-                              style={{ width: '100%', boxSizing: 'border-box' }}
-                              value={goal.target || ''} 
-                              disabled
-                            />
+                          
+                          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#4b5563', marginBottom: '0.5rem' }}>
+                              <span>Target: <strong>{goal.target_date || goal.target || '-'}</strong></span>
+                              <span>Weightage: <strong>{goal.weightage}%</strong></span>
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.72rem', color: '#6b7280', background: '#f9fafb', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                              <div>📌 <strong>Thrust Area:</strong> {thrustAreas.find(ta => ta.id === goal.thrust_area_id)?.name || 'Thrust Area'}</div>
+                              <div>📊 <strong>UoM Type:</strong> {goal.uom_type.replace('_', ' ')}</div>
+                            </div>
                           </div>
-                        )}
-                        
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={`shared-${i}`} className="checkin-card active-completed" style={{ cursor: 'default', minHeight: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
-                          <input 
-                            type="number" 
-                            className="user-input" 
-                            style={{ width: '100%', boxSizing: 'border-box' }}
-                            value={goal.weightage} 
-                            onChange={e => updateGoalByObject(goal, 'weightage', e.target.value)}
-                            disabled={!isEditable}
-                            min={minGoalWeightage} max="100"
-                          />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                            <h4 style={{ margin: 0, color: '#475569', fontSize: '0.98rem', fontWeight: 700 }}>Shared Goal Details</h4>
+                            <span className="badge badge-draft" style={{ background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe' }}>Shared</span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Title</label>
+                              <input 
+                                type="text" 
+                                className="user-input" 
+                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                value={goal.title} 
+                                disabled
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Thrust Area</label>
+                              <select 
+                                className="user-select" 
+                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                value={goal.thrust_area_id || ''}
+                                disabled
+                              >
+                                {thrustAreas.map(ta => <option key={ta.id} value={ta.id}>{ta.name}</option>)}
+                              </select>
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Description (Optional)</label>
+                              <textarea 
+                                className="user-input" 
+                                style={{ width: '100%', boxSizing: 'border-box', height: '60px' }}
+                                value={goal.description || ''} 
+                                disabled
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>UoM Type</label>
+                              <select 
+                                className="user-select" 
+                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                value={goal.uom_type}
+                                disabled
+                              >
+                                {UOM_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                              </select>
+                            </div>
+                            
+                            {goal.uom_type === 'timeline' ? (
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Date</label>
+                                <input 
+                                  type="date" 
+                                  className="user-input" 
+                                  style={{ width: '100%', boxSizing: 'border-box' }}
+                                  value={goal.target_date || ''} 
+                                  disabled
+                                />
+                              </div>
+                            ) : (
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Target Value</label>
+                                <input 
+                                  type="number" 
+                                  className="user-input" 
+                                  style={{ width: '100%', boxSizing: 'border-box' }}
+                                  value={goal.target || ''} 
+                                  disabled
+                                />
+                              </div>
+                            )}
+                             <div>
+                              <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: '#6b7280' }}>Weightage (%)</label>
+                              <input 
+                                type="number" 
+                                className="user-input" 
+                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                defaultValue={goal.weightage}
+                                key={`shared-weight-${goal.id || i}-${goal.weightage}`}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    adjustWeightages(goal, e.target.value)
+                                    e.target.blur()
+                                  }
+                                }}
+                                onBlur={e => {
+                                  adjustWeightages(goal, e.target.value)
+                                }}
+                                min={minGoalWeightage} max="100"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
           </div>
 
-          {isEditable && (
+          {canEmployeeEdit && (
             <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
-              <button className="btn-sm btn-ghost-sm" onClick={addGoal} disabled={goals.length >= maxGoalsPerSheet}>+ Add Goal</button>
+              {isEditable ? (
+                <button className="btn-sm btn-ghost-sm" onClick={addGoal} disabled={goals.length >= maxGoalsPerSheet}>+ Add Goal</button>
+              ) : (
+                <div />
+              )}
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button className="btn-sm btn-ghost-sm" onClick={handleSaveDraft}>Save Draft</button>
                 {windowOpen ? (

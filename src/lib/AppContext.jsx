@@ -37,8 +37,7 @@ export function AppProvider({ children }) {
       const profilePromise = supabase
         .from('users')
         .select(`
-          id, auth_id, name, email, role, manager_id, department_id,
-          departments(name)
+          id, auth_id, name, email, role, manager_id
         `)
         .eq('auth_id', session.user.id)
         .maybeSingle()
@@ -77,36 +76,40 @@ export function AppProvider({ children }) {
         const auto = settingsMap['auto_active_quarter']
         const currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
 
-        let { data: windows, error: winErr } = await supabase
-          .from('check_in_windows')
-          .select('*')
-          .eq('cycle_id', activeCycleData.id)
-          .eq('quarter', currentQ)
-          .order('window_open', { ascending: false })
-          .limit(1)
-
-        if (winErr) throw winErr
-        let win = windows?.[0] || null
-
-        // Auto-create quarterly window if it doesn't exist yet
-        if (!win) {
-          const dates = getQuarterFixedDates(currentQ)
-          const { data: newWin, error: insertErr } = await supabase
+        if (currentQ === 'phase1') {
+          setActiveWindow(null)
+        } else {
+          let { data: windows, error: winErr } = await supabase
             .from('check_in_windows')
-            .insert({
-              cycle_id: activeCycleData.id,
-              quarter: currentQ,
-              window_open: dates.open,
-              window_close: dates.close
-            })
-            .select()
-            .single()
+            .select('*')
+            .eq('cycle_id', activeCycleData.id)
+            .eq('quarter', currentQ)
+            .order('window_open', { ascending: false })
+            .limit(1)
 
-          if (!insertErr) {
-            win = newWin
+          if (winErr) throw winErr
+          let win = windows?.[0] || null
+
+          // Auto-create quarterly window if it doesn't exist yet
+          if (!win) {
+            const dates = getQuarterFixedDates(currentQ)
+            const { data: newWin, error: insertErr } = await supabase
+              .from('check_in_windows')
+              .insert({
+                cycle_id: activeCycleData.id,
+                quarter: currentQ,
+                window_open: dates.open,
+                window_close: dates.close
+              })
+              .select()
+              .single()
+
+            if (!insertErr) {
+              win = newWin
+            }
           }
+          setActiveWindow(win)
         }
-        setActiveWindow(win)
       } else {
         setActiveWindow(null)
       }

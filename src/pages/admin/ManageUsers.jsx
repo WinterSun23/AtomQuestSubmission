@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import AdminLayout from '../../layouts/AdminLayout'
 import { getAllUsers, updateUserRole, updateUserManager } from '../../lib/adminApi'
 import { logEvent } from '../../lib/userApi'
+import { useApp } from '../../lib/AppContext'
 
 const ROLES = ['employee', 'manager', 'admin']
 
 export default function ManageUsers() {
+  const { me } = useApp()
   const [users,   setUsers]   = useState([])
   const [search,  setSearch]  = useState('')
   const [filter,  setFilter]  = useState('all')
@@ -99,14 +101,20 @@ export default function ManageUsers() {
                 <td style={{ fontWeight: 600, color: '#111827' }}>{u.name}</td>
                 <td style={{ color: '#6b7280', fontSize: '0.82rem' }}>{u.email}</td>
                 <td>
-                  <select
-                    id={`role-${u.id}`}
-                    className="admin-select"
-                    value={u.role}
-                    onChange={e => handleRoleChange(u.id, e.target.value)}
-                  >
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
+                  {(u.role === 'admin' || u.id === me?.id) ? (
+                    <span className="badge badge-approved" style={{ textTransform: 'capitalize', padding: '0.45rem 0.9rem', fontSize: '0.82rem', fontWeight: 700 }}>
+                      🛡️ {u.role}
+                    </span>
+                  ) : (
+                    <select
+                      id={`role-${u.id}`}
+                      className="admin-select"
+                      value={u.role}
+                      onChange={e => handleRoleChange(u.id, e.target.value)}
+                    >
+                      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  )}
                 </td>
                 <td>
                   <select

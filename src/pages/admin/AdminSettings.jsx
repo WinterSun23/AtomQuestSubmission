@@ -71,7 +71,7 @@ export default function AdminSettings() {
           </thead>
           <tbody>
             {settings
-              .filter(s => s.key !== 'active_quarter_override' && s.key !== 'goal_window_open')
+              .filter(s => s.key !== 'active_quarter_override' && s.key !== 'goal_window_open' && s.key !== 'auto_active_quarter' && s.key !== 'email_notifications_level')
               .map(s => {
                 const meta = SETTING_META[s.key] ?? { label: s.key, type: 'text', hint: s.description }
                 return (

@@ -9,14 +9,10 @@ async function getHeaders() {
   }
 }
 
-/**
- * Generates an Excel Achievement Report from the backend
- */
-export async function generateAchievementReport(cycleId, departmentId, quarter) {
+export async function generateAchievementReport(cycleId, quarter) {
   const headers = await getHeaders()
   const params = new URLSearchParams()
   if (cycleId) params.append('cycleId', cycleId)
-  if (departmentId) params.append('departmentId', departmentId)
   if (quarter) params.append('quarter', quarter)
 
   const url = `${API_URL}/api/reports/achievement?${params.toString()}`

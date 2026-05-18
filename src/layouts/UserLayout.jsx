@@ -8,7 +8,7 @@ import './UserLayout.css'
 export default function UserLayout({ children }) {
   const navigate  = useNavigate()
   const location  = useLocation()
-  const { me, loading } = useApp()
+  const { me, loading, settings } = useApp()
   
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState([])
@@ -23,7 +23,7 @@ export default function UserLayout({ children }) {
       navigate('/admin')
       return
     } else if (me.role === 'manager' && (location.pathname === '/dashboard/my-goals' || location.pathname === '/dashboard')) {
-      navigate('/dashboard/team-goals')
+      navigate('/dashboard/overview')
       return
     }
 
@@ -78,14 +78,23 @@ export default function UserLayout({ children }) {
   // Navigation structure based on role
   const NAV = []
 
+  const override = settings?.['active_quarter_override']
+  const auto = settings?.['auto_active_quarter']
+  const currentQ = override && override !== 'auto' && override !== '' ? override : (auto || 'Q1')
+  const isPhase1 = currentQ === 'phase1'
+
   if (me?.role === 'employee') {
+    const employeeItems = [
+      { id: 'goals',       label: 'My Goals',         icon: '🎯', path: '/dashboard/my-goals' }
+    ]
+    if (!isPhase1) {
+      employeeItems.push({ id: 'checkins',    label: 'My Check-ins',     icon: '📝', path: '/dashboard/my-checkins' })
+    }
+    employeeItems.push({ id: 'preferences', label: 'Preferences',      icon: '⚙️', path: '/dashboard/preferences' })
+
     NAV.push({
       section: 'My Portal',
-      items: [
-        { id: 'goals',       label: 'My Goals',         icon: '🎯', path: '/dashboard/my-goals' },
-        { id: 'checkins',    label: 'My Check-ins',     icon: '📝', path: '/dashboard/my-checkins' },
-        { id: 'preferences', label: 'Preferences',      icon: '⚙️', path: '/dashboard/preferences' },
-      ],
+      items: employeeItems,
     })
   }
 
@@ -103,10 +112,10 @@ export default function UserLayout({ children }) {
     NAV.push({
       section: 'Team Portal',
       items: [
-        { id: 'team-goals',    label: 'Team Goals',     icon: '👥', path: '/dashboard/team-goals' },
-        { id: 'team-checkins', label: 'Team Check-ins', icon: '✅', path: '/dashboard/team-checkins' },
+        { id: 'overview',      label: 'Team Overview',  icon: '📊', path: '/dashboard/overview' },
+        { id: 'team-goals',    label: 'Team Goals & Check-ins', icon: '🎯', path: '/dashboard/team-goals' },
         { id: 'team-escalations', label: 'Team Escalations', icon: '🚨', path: '/dashboard/team-escalations' },
-        { id: 'reports',       label: 'Reports',        icon: '📊', path: '/dashboard/reports' },
+        { id: 'reports',       label: 'Reports',        icon: '📋', path: '/dashboard/reports' },
       ]
     })
   }

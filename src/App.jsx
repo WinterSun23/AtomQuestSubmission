@@ -11,6 +11,7 @@ import ResetPassword from './pages/ResetPassword'
 
 // Layouts
 import UserLayout from './layouts/UserLayout'
+import AdminLayout from './layouts/AdminLayout'
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -27,7 +28,6 @@ import DashboardOverview from './pages/dashboard/DashboardOverview'
 import MyGoals from './pages/dashboard/MyGoals'
 import MyCheckins from './pages/dashboard/MyCheckins'
 import TeamGoals from './pages/dashboard/TeamGoals'
-import TeamCheckins from './pages/dashboard/TeamCheckins'
 import Reports from './pages/dashboard/Reports'
 import NotificationPrefs from './pages/dashboard/NotificationPrefs'
 import TeamEscalations from './pages/dashboard/TeamEscalations'
@@ -84,13 +84,15 @@ export default function App() {
 
           {/* ── Employee / Manager ── */}
           <Route path="/dashboard" element={<Navigate to="/dashboard/my-goals" replace />} />
+          <Route path="/dashboard/overview" element={<PrivateRoute><UserLayout><DashboardOverview /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/my-goals" element={<PrivateRoute><UserLayout><MyGoals /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/my-checkins" element={<PrivateRoute><UserLayout><MyCheckins /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/preferences" element={<PrivateRoute><UserLayout><NotificationPrefs /></UserLayout></PrivateRoute>} />
           
           {/* Manager only routes (we can guard these later, for now they are in the layout) */}
           <Route path="/dashboard/team-goals" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
-          <Route path="/dashboard/team-checkins" element={<PrivateRoute><UserLayout><TeamCheckins /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/team-roster" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/team-checkins" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/team-escalations" element={<PrivateRoute><UserLayout><TeamEscalations /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/reports" element={<PrivateRoute><UserLayout><Reports /></UserLayout></PrivateRoute>} />
 
@@ -103,6 +105,7 @@ export default function App() {
           <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
           <Route path="/admin/goal-unlock" element={<AdminRoute><GoalUnlock /></AdminRoute>} />
           <Route path="/admin/escalations" element={<AdminRoute><Escalations /></AdminRoute>} />
+          <Route path="/admin/reports" element={<AdminRoute><AdminLayout><Reports /></AdminLayout></AdminRoute>} />
 
           {/* ── Fallback ── */}
           <Route path="*" element={<Navigate to="/login" replace />} />
