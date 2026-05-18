@@ -33,7 +33,7 @@ export default function Reports() {
 
   async function loadCycles() {
     try {
-      const { data: cycList } = await supabase.from('performance_cycles').select('*')
+      const { data: cycList } = await supabase.from('cycles').select('*')
       const sorted = cycList || []
       setCycles(sorted)
       const active = sorted.find(c => c.is_active)
