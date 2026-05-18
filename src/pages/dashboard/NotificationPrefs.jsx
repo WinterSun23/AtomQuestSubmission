@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
+import { useApp } from '../../lib/AppContext'
+
 export default function NotificationPrefs() {
+  const { me, loading: contextLoading } = useApp()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [emailEnabled, setEmailEnabled] = useState(true)
@@ -10,20 +13,19 @@ export default function NotificationPrefs() {
   const [notifications, setNotifications] = useState([])
 
   useEffect(() => {
-    loadPreferencesAndNotifications()
-  }, [])
+    if (me) {
+      loadPreferencesAndNotifications()
+    }
+  }, [contextLoading, me])
 
   async function loadPreferencesAndNotifications() {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      // Fetch preferences
+      // Fetch preferences using the internal profile ID (me.id)
       const { data: prefs } = await supabase
         .from('notification_preferences')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', me.id)
         .maybeSingle()
 
       if (prefs) {
@@ -32,11 +34,11 @@ export default function NotificationPrefs() {
         setReminderDays(prefs.reminder_days_before)
       }
 
-      // Fetch in-app notifications
+      // Fetch in-app notifications using me.id
       const { data: list } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', me.id)
         .order('created_at', { ascending: false })
       
       if (list) {
@@ -49,15 +51,13 @@ export default function NotificationPrefs() {
   }
 
   async function handleSave() {
+    if (!me) return
     setSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       const { error } = await supabase
         .from('notification_preferences')
         .upsert({
-          user_id: user.id,
+          user_id: me.id,
           email_enabled: emailEnabled,
           teams_enabled: teamsEnabled,
           reminder_days_before: reminderDays,
@@ -73,14 +73,12 @@ export default function NotificationPrefs() {
   }
 
   async function handleMarkAllRead() {
+    if (!me) return
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('user_id', user.id)
+        .eq('user_id', me.id)
       
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
       alert('All notifications marked as read.')
