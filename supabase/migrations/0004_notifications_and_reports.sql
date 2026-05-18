@@ -11,11 +11,11 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own notifications"
     ON public.notifications FOR SELECT
-    USING (auth.uid() = user_id);
+    USING (public.get_my_portal_id() = user_id);
 
 CREATE POLICY "Users can update their own notifications"
     ON public.notifications FOR UPDATE
-    USING (auth.uid() = user_id);
+    USING (public.get_my_portal_id() = user_id);
 
 -- Create reports bucket if it doesn't exist
 INSERT INTO storage.buckets (id, name, public) 
