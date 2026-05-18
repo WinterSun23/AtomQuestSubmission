@@ -28,6 +28,7 @@ import DashboardOverview from './pages/dashboard/DashboardOverview'
 import MyGoals from './pages/dashboard/MyGoals'
 import MyCheckins from './pages/dashboard/MyCheckins'
 import TeamGoals from './pages/dashboard/TeamGoals'
+import TeamCheckins from './pages/dashboard/TeamCheckins'
 import Reports from './pages/dashboard/Reports'
 import NotificationPrefs from './pages/dashboard/NotificationPrefs'
 import TeamEscalations from './pages/dashboard/TeamEscalations'
@@ -92,7 +93,7 @@ export default function App() {
           {/* Manager only routes (we can guard these later, for now they are in the layout) */}
           <Route path="/dashboard/team-goals" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/team-roster" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
-          <Route path="/dashboard/team-checkins" element={<PrivateRoute><UserLayout><TeamGoals /></UserLayout></PrivateRoute>} />
+          <Route path="/dashboard/team-checkins" element={<PrivateRoute><UserLayout><TeamCheckins /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/team-escalations" element={<PrivateRoute><UserLayout><TeamEscalations /></UserLayout></PrivateRoute>} />
           <Route path="/dashboard/reports" element={<PrivateRoute><UserLayout><Reports /></UserLayout></PrivateRoute>} />
 
