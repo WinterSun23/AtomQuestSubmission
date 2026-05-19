@@ -109,12 +109,11 @@ GoalFlow stands out by implementing major enterprise features for maximum govern
     *   Goal Approval/Rejection (alert to Employee with rework notes).
     *   Check-in Milestones & Reminders.
 *   **Email Notification Proofs:**
-    
-    #### 1. Goal Submission Notification Email
-    ![Goal Submission Email Notification](./dist/email1.png)
+        #### 1. Goal Submission Notification Email
+    ![Goal Submission Email Notification](./email1.png)
     
     #### 2. Goal Milestone Reminder Email
-    ![Goal Milestone Reminder Email](./dist/Goal%20remainder.png)
+    ![Goal Milestone Reminder Email](./Goal%20remainder.png)
     
 *   **Real-Time WebSockets Notifications**: A persistent server-to-client postgres replication triggers floating alerts immediately on the user's dashboard bell.
 
@@ -125,7 +124,7 @@ GoalFlow stands out by implementing major enterprise features for maximum govern
     *   If the manager has not approved within $N$ days of submission → Escalate to skip-level manager (L2).
     *   If a quarterly check-in is missed → Alert Skip-level manager and notify HR (L3).
 *   **Escalation Notification Proof:**
-    ![Escalation Notification Email](./dist/escalation%20(timeout%20is%201%20min%20for%20testing).png)
+    ![Escalation Notification Email](./escalation%20(timeout%20is%201%20min%20for%20testing).png)
     *(Note: For demonstration and testing purposes, the escalation action threshold is set to 1 minute to allow quick verification without waiting for the default days).*
     
 *   **BullMQ Workers**: Handled by resilient, low-latency background queue workers checking breaches daily.
