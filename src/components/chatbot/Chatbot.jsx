@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { API_URL } from '../../lib/userApi'
 import './Chatbot.css'
 
 export default function Chatbot() {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState([
     {
@@ -13,6 +15,8 @@ export default function Chatbot() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmingAction, setConfirmingAction] = useState(null) // { action, msgIndex }
+  const [executingAction, setExecutingAction] = useState(false)
   
   const messagesEndRef = useRef(null)
 
@@ -42,13 +46,14 @@ export default function Chatbot() {
     setInput('')
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setLoading(true)
+    setConfirmingAction(null) // Reset pending action
 
     try {
       const headers = await getHeaders()
       
-      // We pass the full message history to Groq for context
+      // We pass the full message history to Groq for context (stripping other params)
       const chatHistory = [...messages, { role: 'user', content: userMessage }]
-        .filter(m => m.role !== 'system') // ensure system instructions aren't duplicated
+        .filter(m => m.role !== 'system') 
         .map(m => ({ role: m.role, content: m.content }))
 
       const response = await fetch(`${API_URL}/api/chatbot/chat`, {
@@ -63,7 +68,7 @@ export default function Chatbot() {
       }
 
       const data = await response.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply, action: data.action }])
 
     } catch (err) {
       console.error('Chatbot request error:', err)
@@ -76,6 +81,58 @@ export default function Chatbot() {
       ])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleActionClick = (action, index) => {
+    if (action.type === 'navigate') {
+      navigate(action.path)
+      setIsOpen(false) // Auto close chatbot window on redirect
+    } else if (action.type === 'api_call') {
+      if (action.confirmationPrompt) {
+        setConfirmingAction({ action, msgIndex: index })
+      } else {
+        handleExecuteAction(action)
+      }
+    }
+  }
+
+  async function handleExecuteAction(action) {
+    setExecutingAction(true)
+    try {
+      const headers = await getHeaders()
+      const url = action.endpoint.startsWith('http') ? action.endpoint : `${API_URL}${action.endpoint}`
+      const response = await fetch(url, {
+        method: action.method || 'POST',
+        headers,
+        body: action.payload ? JSON.stringify(action.payload) : undefined
+      })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.error || 'API execution failed.')
+      }
+
+      const resData = await response.json().catch(() => ({}))
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `✅ **Successfully executed:** ${action.label}\n\n*System Response: ${resData.message || 'Action completed successfully.'}*`
+        }
+      ])
+    } catch (err) {
+      console.error('Action execution error:', err)
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `❌ **Failed to run action:** ${action.label}\n\n*Error: ${err.message}*`
+        }
+      ])
+    } finally {
+      setExecutingAction(false)
+      setConfirmingAction(null)
     }
   }
 
@@ -121,7 +178,41 @@ export default function Chatbot() {
                   {m.role === 'assistant' ? '🤖' : '👤'}
                 </div>
                 <div className="message-bubble">
-                  {m.content}
+                  <div className="message-text" style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>
+                  
+                  {m.role === 'assistant' && m.action && (
+                    <div className="action-block" style={{ marginTop: '0.75rem' }}>
+                      {confirmingAction?.msgIndex === index ? (
+                        <div className="confirmation-area">
+                          <p className="confirm-prompt">{confirmingAction.action.confirmationPrompt || 'Confirm execution?'}</p>
+                          <div className="confirm-buttons">
+                            <button 
+                              className="confirm-btn yes" 
+                              onClick={() => handleExecuteAction(confirmingAction.action)}
+                              disabled={executingAction}
+                            >
+                              {executingAction ? 'Executing...' : 'Yes, Proceed'}
+                            </button>
+                            <button 
+                              className="confirm-btn no" 
+                              onClick={() => setConfirmingAction(null)}
+                              disabled={executingAction}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button 
+                          className={`action-btn ${m.action.type}`} 
+                          onClick={() => handleActionClick(m.action, index)}
+                        >
+                          {m.action.type === 'navigate' ? '🔗 ' : '⚡ '}
+                          {m.action.label || 'Run Action'}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

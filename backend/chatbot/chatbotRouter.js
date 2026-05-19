@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { createClient } = require('@supabase/supabase-js')
+const frontendMap = require('./frontendMap.json')
 
 // Create Supabase client using Service Role Key to bypass RLS and fetch all company data securely on the backend
 const supabaseUrl = process.env.VITE_SUPABASE_URL
@@ -14,24 +15,24 @@ const requireAdmin = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ error: 'Authentication token is required.' })
     }
-    
+
     // Validate session token with Supabase Auth
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
     if (authErr || !user) {
       return res.status(401).json({ error: 'Invalid or expired session token.' })
     }
-    
+
     // Check if the user is explicitly configured as an 'admin' in the users table
     const { data: profile, error: dbErr } = await supabase
       .from('users')
       .select('role, id')
       .eq('auth_id', user.id)
       .single()
-      
+
     if (dbErr || !profile || profile.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden: Admin role access required.' })
     }
-    
+
     req.user = profile
     next()
   } catch (err) {
@@ -58,7 +59,7 @@ router.post('/chat', requireAdmin, async (req, res) => {
     const { data: users, error: usersErr } = await supabase
       .from('users')
       .select('id, name, email, role, department_id, manager_id')
-    
+
     const { data: departments, error: deptsErr } = await supabase
       .from('departments')
       .select('id, name')
@@ -103,10 +104,33 @@ router.post('/chat', requireAdmin, async (req, res) => {
       }
     })
 
-    // 4. Construct System Prompt with the live DB snapshot
+    // 4. Construct System Prompt with the live DB snapshot and JSON schema instructions
     const systemPrompt = `
-You are the GoalFlow Portal AI Assistant. Your job is to help administrators analyze and understand their performance portal data.
-You have access to a secure, live database snapshot below. NEVER reveal raw UUIDs or any database keys. Always refer to users, goals, and departments by name.
+You are the GoalFlow Portal AI Assistant. Your job is to help users analyze data, navigate the portal, and perform administrative actions.
+You must return your response in JSON format. Do not return any text before or after the JSON object.
+
+=== JSON RESPONSE SCHEMA ===
+Your response MUST be a single JSON object matching this schema:
+{
+  "reply": "Your conversational text response (markdown supported). Be concise, helpful, and professional.",
+  "action": null | {
+    "type": "navigate" | "api_call",
+    "path": "/admin/escalations", // Required ONLY for type: "navigate"
+    "endpoint": "/api/cron/trigger", // Required ONLY for type: "api_call"
+    "method": "POST" | "GET", // Required ONLY for type: "api_call"
+    "payload": {}, // Optional, ONLY for type: "api_call"
+    "label": "Action Button Label (e.g. 'Go to Escalations', 'Run Escalations')",
+    "confirmationPrompt": "Optional prompt to ask the user before calling the API" // Optional, ONLY for type: "api_call"
+  }
+}
+
+=== KNOWN FRONTEND ROUTES (type: "navigate") ===
+Use these routes to navigate the user to different pages when they ask how to see or manage something:
+${JSON.stringify(frontendMap.routes, null, 2)}
+
+=== KNOWN API AUTOMATIONS (type: "api_call") ===
+Use this to trigger actions on the backend. Always require a confirmation prompt:
+${JSON.stringify(frontendMap.api_automations, null, 2)}
 
 === SNAPSHOT OF COMPANY DIRECTORY & HIERARCHY ===
 ${JSON.stringify(enrichedUsers, null, 2)}
@@ -118,15 +142,14 @@ ${JSON.stringify((departments || []).map(d => d.name), null, 2)}
 ${JSON.stringify(enrichedGoals, null, 2)}
 
 === GUIDELINES ===
-1. Use only the provided database snapshot to answer questions.
-2. Be helpful, professional, and concise.
-3. If asked about a user's manager, department, or goals, check the snapshot above and provide a clear answer.
-4. If a user asks to modify data, explain that you are read-only and they must use the portal interface.
-5. If the requested information is not in the snapshot, politely say you don't have access to that specific information.
-6. Absolutely no sensitive data (like passwords, auth tokens, or RLS secrets) are exposed to you. Keep it that way.
+1. Use the database snapshot to answer factual questions.
+2. If the user asks to go somewhere, see a page, or execute a task listed above, populate the "action" block based on the provided schemas.
+3. If no page or API matches the user's intent, set "action" to null.
+4. Never suggest admin pages (/admin/*) or admin APIs (/api/cron/*) to non-admin users. Only do so if you see their role is admin or they are in the admin dashboard.
+5. Do not reveal database keys or raw UUIDs.
 `
 
-    // 5. Send request to Groq API
+    // 5. Send request to Groq API with JSON Mode enabled
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -135,6 +158,7 @@ ${JSON.stringify(enrichedGoals, null, 2)}
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
+        response_format: { type: "json_object" },
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages
@@ -150,9 +174,24 @@ ${JSON.stringify(enrichedGoals, null, 2)}
     }
 
     const data = await response.json()
-    const reply = data.choices[0].message.content
+    const rawReply = data.choices[0].message.content
+    
+    // Parse JSON safely from LLM response
+    let parsedResponse
+    try {
+      parsedResponse = JSON.parse(rawReply)
+    } catch (e) {
+      console.error('Failed to parse LLM JSON reply:', rawReply, e)
+      parsedResponse = {
+        reply: rawReply,
+        action: null
+      }
+    }
 
-    res.json({ reply })
+    res.json({
+      reply: parsedResponse.reply,
+      action: parsedResponse.action
+    })
 
   } catch (error) {
     console.error('Chatbot API Exception:', error)

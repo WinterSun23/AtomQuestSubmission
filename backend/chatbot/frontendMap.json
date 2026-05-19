@@ -1,0 +1,96 @@
+{
+  "routes": [
+    {
+      "path": "/dashboard/overview",
+      "description": "General overview dashboard, analytics tracker, and team completion compliance stats.",
+      "label": "Go to Overview"
+    },
+    {
+      "path": "/dashboard/my-goals",
+      "description": "View, configure, set, and submit personal or shared employee goals.",
+      "label": "Go to My Goals"
+    },
+    {
+      "path": "/dashboard/my-checkins",
+      "description": "Log check-ins, record actual achievement progress, and see managers comments on goals.",
+      "label": "Go to My Check-ins"
+    },
+    {
+      "path": "/dashboard/team-goals",
+      "description": "Manager's panel to review direct reports, department rosters, or update team goals.",
+      "label": "Go to Team Goals"
+    },
+    {
+      "path": "/dashboard/team-checkins",
+      "description": "Manager's panel to review, comment on, and approve team check-ins.",
+      "label": "Go to Team Check-ins"
+    },
+    {
+      "path": "/dashboard/team-escalations",
+      "description": "Manager's view of active goal escalations (L1/L2/L3) in their team.",
+      "label": "Go to Team Escalations"
+    },
+    {
+      "path": "/dashboard/reports",
+      "description": "Download Excel or PDF achievement sheets, compliance logs, and employee reports.",
+      "label": "Go to Reports"
+    },
+    {
+      "path": "/dashboard/preferences",
+      "description": "Manage notification preferences, email settings, and profile settings.",
+      "label": "Go to Preferences"
+    },
+    {
+      "path": "/admin",
+      "description": "Admin overview portal, organizational analytics, and parameters.",
+      "label": "Go to Admin Dashboard",
+      "adminOnly": true
+    },
+    {
+      "path": "/admin/users",
+      "description": "Manage user accounts, department assignments, and manager reporting structure.",
+      "label": "Manage Users",
+      "adminOnly": true
+    },
+    {
+      "path": "/admin/thrust-areas",
+      "description": "Configure company strategic business thrust areas.",
+      "label": "Manage Thrust Areas",
+      "adminOnly": true
+    },
+    {
+      "path": "/admin/cycles",
+      "description": "Manage performance cycles, start/end dates, and checking periods.",
+      "label": "Manage Cycles",
+      "adminOnly": true
+    },
+    {
+      "path": "/admin/audit-log",
+      "description": "Audit logs, security actions, and compliance events log.",
+      "label": "View Audit Logs",
+      "adminOnly": true
+    },
+    {
+      "path": "/admin/goal-unlock",
+      "description": "Admin approval page to process goal sheet unlock requests from employees.",
+      "label": "Manage Goal Unlocks",
+      "adminOnly": true
+    },
+    {
+      "path": "/admin/escalations",
+      "description": "Admin panel to review all organizational escalations and trigger manual cron engine scans.",
+      "label": "Manage Escalations",
+      "adminOnly": true
+    }
+  ],
+  "api_automations": [
+    {
+      "endpoint": "/api/cron/trigger",
+      "method": "POST",
+      "description": "Trigger the manual escalation engine scan to advance quarter targets and log breaches.",
+      "label": "Run Escalation Engine",
+      "confirmationPrompt": "Are you sure you want to trigger the manual escalation engine scans now?",
+      "adminOnly": true
+    }
+  ]
+}
