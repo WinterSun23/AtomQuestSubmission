@@ -226,10 +226,11 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '1rem', borderBottom: '2px solid #30363d', marginBottom: '1.5rem' }}>
         <button onClick={() => setMainTab('analytics')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, padding: '0.75rem 1rem', color: mainTab === 'analytics' ? '#58a6ff' : '#8b949e', borderBottom: mainTab === 'analytics' ? '3px solid #58a6ff' : '3px solid transparent' }}>📊 Overview & Analytics</button>
-        <button onClick={() => setMainTab('cron')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, padding: '0.75rem 1rem', color: mainTab === 'cron' ? '#58a6ff' : '#8b949e', borderBottom: mainTab === 'cron' ? '3px solid #58a6ff' : '3px solid transparent' }}>⚙️ Cron Jobs</button>
+        <button onClick={() => setMainTab('cron')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, padding: '0.75rem 1rem', color: mainTab === 'cron' ? '#58a6ff' : '#8b949e', borderBottom: mainTab === 'cron' ? '3px solid #58a6ff' : '3px solid transparent' }}>🚀 Cron Jobs</button>
+        <button onClick={() => setMainTab('settings')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, padding: '0.75rem 1rem', color: mainTab === 'settings' ? '#58a6ff' : '#8b949e', borderBottom: mainTab === 'settings' ? '3px solid #58a6ff' : '3px solid transparent' }}>⚙️ System Settings</button>
       </div>
 
-      {mainTab === 'analytics' ? (
+      {mainTab === 'analytics' && (
         <>
           {/* Summary Cards */}
           <div className="admin-summary-grid">
@@ -477,25 +478,35 @@ export default function AdminDashboard() {
             )}
           </div>
         </>
-      ) : (
+      )}
+
+      {mainTab === 'cron' && (
         <div style={{ marginTop: '1.5rem' }}>
           <div className="chart-card">
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 700 }}>⚡ Background Queue & Engine Workers</h3>
-            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1.5rem' }}>GoalFlow triggers automated cron scans and BullMQ background workers to execute deadline logic, check-in window closures, and rule validations.</p>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 700, color: '#f0f6fc' }}>🚀 Background Queue & Engine Workers</h3>
+            <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '1.5rem' }}>GoalFlow triggers automated cron scans and BullMQ background workers to execute deadline logic, check-in window closures, and rule validations.</p>
             
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-              <button onClick={handleTriggerCron} disabled={triggering} style={{ padding: '0.75rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer', border: 'none', background: triggering ? '#a5b4fc' : '#4f46e5', color: '#fff' }}>
+              <button onClick={handleTriggerCron} disabled={triggering} style={{ padding: '0.75rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer', border: 'none', background: triggering ? '#a5b4fc' : '#1f6feb', color: '#fff' }} onMouseOver={e => !triggering && (e.currentTarget.style.background = '#388bfd')} onMouseOut={e => !triggering && (e.currentTarget.style.background = '#1f6feb')}>
                 {triggering ? '🔄 Executing...' : '🚀 Force Execute Cron Engine Now'}
               </button>
             </div>
             
             {triggerMessage && (
-              <div style={{ padding: '1rem', borderRadius: 8, background: triggerMessage.includes('✅') ? '#f0fdf4' : '#fdf2f2', color: triggerMessage.includes('✅') ? '#15803d' : '#b91c1c', fontSize: '0.85rem', fontWeight: 600, border: `1px solid ${triggerMessage.includes('✅') ? '#bbf7d0' : '#fecaca'}` }}>
+              <div style={{ padding: '1rem', borderRadius: 8, background: triggerMessage.includes('✅') ? '#1f242c' : '#2d191e', color: triggerMessage.includes('✅') ? '#58a6ff' : '#f85149', fontSize: '0.85rem', fontWeight: 600, border: `1px solid ${triggerMessage.includes('✅') ? '#30363d' : '#f85149'}` }}>
                 {triggerMessage}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {mainTab === 'settings' && (
+        <div style={{ marginTop: '1.5rem' }}>
+          <div className="chart-card">
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 700, color: '#f0f6fc' }}>⚙️ System Settings</h3>
+            <p style={{ fontSize: '0.85rem', color: '#8b949e', marginBottom: '1.5rem' }}>Customize global behavior, limits, and escalation rules for the Goal Setting & Tracking Portal.</p>
             
-            <h4 style={{ margin: '1.5rem 0 1rem 0', fontSize: '1rem', fontWeight: 700, color: '#f0f6fc' }}>⚙️ Active Scheduler Parameters</h4>
             <div style={{ border: '1px solid #30363d', borderRadius: 8, overflow: 'hidden', background: '#0d1117' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                 <thead>

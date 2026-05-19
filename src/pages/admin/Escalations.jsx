@@ -145,7 +145,7 @@ export default function Escalations() {
                 <th>Rule ID</th>
                 <th>Level</th>
                 <th>Employee</th>
-                <th>Notified Manager</th>
+                <th>Notified User</th>
                 <th>Action</th>
               </tr>
             ) : (
@@ -289,7 +289,7 @@ export default function Escalations() {
                 </div>
                 <div>
                   <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: '#4b5563', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    👥 Notified Manager
+                    👥 Notified User
                   </h4>
                   <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '0.75rem' }}>
                     <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedEsc.notified?.name || '—'}</div>

@@ -32,17 +32,37 @@ const SEED_USERS = [
     role: 'manager'
   },
   {
+    email: 'cbersq+maintainer2@gmail.com',
+    password: 'Password123',
+    name: 'bob (Manager)',
+    role: 'manager'
+  },
+  {
     email: 'cbersq+user1@gmail.com',
     password: 'Password123',
     name: 'ash (Employee)',
     role: 'employee',
     managerEmail: 'cbersq+maintainer1@gmail.com'
+  },
+  {
+    email: 'cbersq+user2@gmail.com',
+    password: 'Password123',
+    name: 'bob (Employee)',
+    role: 'employee',
+    managerEmail: 'cbersq+maintainer1@gmail.com'
+  },
+  {
+    email: 'cbersq+user3@gmail.com',
+    password: 'Password123',
+    name: 'charlie (Employee)',
+    role: 'employee',
+    managerEmail: 'cbersq+maintainer2@gmail.com'
   }
 ]
 
 async function seed() {
   console.log('🚀 Starting Supabase Test Users Seeding Script...')
-  
+
   try {
     // 1. Fetch all existing auth users
     console.log('🔍 Checking existing auth users...')
@@ -54,7 +74,7 @@ async function seed() {
     // 2. Provision or retrieve users in auth
     for (const u of SEED_USERS) {
       const existing = existingAuthUsers.find(au => au.email === u.email)
-      
+
       if (existing) {
         console.log(`✨ Auth user already exists: ${u.email} (Auth ID: ${existing.id})`)
         emailToAuthId[u.email] = existing.id
@@ -65,12 +85,12 @@ async function seed() {
           password: u.password,
           email_confirm: true // Bypasses email confirmation completely!
         })
-        
+
         if (createError) {
           console.error(`❌ Failed to create auth user ${u.email}:`, createError.message)
           continue
         }
-        
+
         console.log(`✅ Created auth user: ${u.email} (Auth ID: ${newUser.user.id})`)
         emailToAuthId[u.email] = newUser.user.id
       }
@@ -104,7 +124,7 @@ async function seed() {
           .from('users')
           .update({ name: u.name, role: u.role })
           .eq('id', dbId)
-        
+
         if (updateErr) throw updateErr
       } else {
         // Fallback insert if trigger didn't fire
@@ -118,7 +138,7 @@ async function seed() {
           })
           .select('id')
           .single()
-        
+
         if (insertErr) throw insertErr
         dbId = newProfile.id
       }
@@ -148,6 +168,25 @@ async function seed() {
         }
       }
     }
+
+    // 5. Ensure auto active quarter and escalation configuration settings exist in the DB
+    console.log('⚙️ Synchronizing app settings configurations...')
+    const month = new Date().getMonth() + 1 // 1-12
+    let activeQ = 'phase1'
+    if (month === 5 || month === 6) activeQ = 'phase1'
+    else if (month >= 7 && month <= 9) activeQ = 'Q1'
+    else if (month >= 10 && month <= 12) activeQ = 'Q2'
+    else if (month === 1 || month === 2) activeQ = 'Q3'
+    else if (month === 3 || month === 4) activeQ = 'Q4'
+
+    await supabase.from('app_settings').delete().eq('key', 'email_notifications_level')
+
+    await supabase.from('app_settings').upsert([
+      { key: 'auto_active_quarter', value: activeQ, description: 'Automatically calculated active quarter' },
+      { key: 'escalation_deadline_days', value: '7', description: 'Duration threshold allowed for submission/approval before escalating' },
+      { key: 'escalation_deadline_unit', value: 'days', description: 'Time unit (days, hours, minutes) for the escalation deadline' }
+    ])
+    console.log(`⚙️ Seeding completed: auto_active_quarter = ${activeQ}, escalation_deadline_days = 7, escalation_deadline_unit = days`)
 
     console.log('\n🎉 Seeding complete! All test accounts are provisioned, auto-confirmed, and linked successfully!')
     console.log('================================================================================')

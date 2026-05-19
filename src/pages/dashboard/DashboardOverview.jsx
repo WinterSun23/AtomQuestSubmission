@@ -37,7 +37,7 @@ export default function DashboardOverview() {
             .from('users')
             .select('id, name, email')
             .eq('manager_id', me.id)
-            
+
           const reportsList = reports || []
           setDirectReports(reportsList)
 
@@ -50,7 +50,7 @@ export default function DashboardOverview() {
               .select('id, status, submitted_at, employee_id')
               .in('employee_id', reportIds)
               .eq('status', 'submitted')
-            
+
             setPendingApprovals(pending || [])
 
             // 2. Fetch all goal sheets for this cycle for our team
@@ -78,16 +78,27 @@ export default function DashboardOverview() {
               const sheetIds = sheets.map(s => s.id)
               const { data } = await supabase
                 .from('goals')
-                .select('id, thrust_area_id, uom_type, thrust_areas:thrust_area_id(name)')
+                .select('id, goal_sheet_id, thrust_area_id, uom_type, thrust_areas:thrust_area_id(name)')
                 .in('goal_sheet_id', sheetIds)
               goals = data || []
+            }
+
+            // Fetch check-ins for the team's goals
+            let checkins = []
+            if (goals && goals.length > 0) {
+              const goalIds = goals.map(g => g.id)
+              const { data } = await supabase
+                .from('check_ins')
+                .select('id, goal_id, window_id')
+                .in('goal_id', goalIds)
+              checkins = data || []
             }
 
             // Compute UoM and Thrust Area statistics
             if (goals && goals.length > 0) {
               const thrustCounts = {}
               const uomCounts = {}
-              
+
               goals.forEach(g => {
                 const name = g.thrust_areas?.name || 'Unassigned'
                 thrustCounts[name] = (thrustCounts[name] || 0) + 1
@@ -120,26 +131,37 @@ export default function DashboardOverview() {
               `)
               .in('employee_id', reportIds)
               .is('resolved_at', null)
-            
+
             setEscalationsList(escalations || [])
 
             // Map the team Real-Time Tracker data
             const compiledTracker = reportsList.map(emp => {
               const empSheet = (sheets || []).find(s => s.employee_id === emp.id)
               const sheetStatus = empSheet ? empSheet.status : 'not_started'
-              
+
               const qCheckins = { Q1: 'Pending', Q2: 'Pending', Q3: 'Pending', Q4: 'Pending', phase1: 'Pending' }
-              
+
               // Map sheets to Phase 1 flag
               if (empSheet) {
                 qCheckins.phase1 = empSheet.status === 'approved' ? 'Completed' : 'Draft'
               }
 
-              // Map manager comments to quarters
+              // Map check-ins to quarters
               windows?.forEach(w => {
                 const qKey = w.quarter
-                const hasComment = comments?.some(c => c.employee_id === emp.id && c.window_id === w.id)
-                qCheckins[qKey] = hasComment ? 'Completed' : 'Pending'
+                const employeeGoals = goals.filter(g => g.goal_sheet_id === empSheet?.id).map(g => g.id)
+                
+                let status = 'Pending'
+                if (employeeGoals.length > 0) {
+                  const checkedInCount = employeeGoals.filter(gid => checkins.some(c => c.window_id === w.id && c.goal_id === gid)).length
+                  if (checkedInCount === employeeGoals.length) {
+                    status = 'Completed'
+                  } else if (checkedInCount > 0) {
+                    status = `${Math.round((checkedInCount / employeeGoals.length) * 100)}%`
+                  }
+                }
+                
+                qCheckins[qKey] = status
               })
 
               return {
@@ -154,9 +176,15 @@ export default function DashboardOverview() {
 
             // Compute overall team check-in rate (active window)
             if (activeWindow) {
-              const activeComments = comments?.filter(c => c.window_id === activeWindow.id) || []
+              let completedCount = 0
+              reportsList.forEach(emp => {
+                const empSheet = (sheets || []).find(s => s.employee_id === emp.id)
+                const employeeGoals = goals.filter(g => g.goal_sheet_id === empSheet?.id).map(g => g.id)
+                const hasCheckin = checkins.some(c => c.window_id === activeWindow.id && employeeGoals.includes(c.goal_id))
+                if (hasCheckin) completedCount++
+              })
               setCompletionStats({
-                completed: activeComments.length,
+                completed: completedCount,
                 total: reportsList.length
               })
             }
@@ -179,30 +207,44 @@ export default function DashboardOverview() {
   const isManager = me.role === 'manager' || me.role === 'admin'
 
   if (isManager) {
-    const completionPercentage = completionStats.total > 0 
-      ? Math.round((completionStats.completed / completionStats.total) * 100) 
+    const completionPercentage = completionStats.total > 0
+      ? Math.round((completionStats.completed / completionStats.total) * 100)
       : 0
 
     const getLevelsStats = () => {
+      const parseScore = (status) => {
+        if (status === 'Completed') return 100
+        if (status && status.endsWith('%')) return parseInt(status.replace('%', ''), 10)
+        return 0
+      }
+
       if (analyticsLevel.startsWith('user_')) {
         const userId = analyticsLevel.replace('user_', '')
         const tr = trackerData.find(t => t.id === userId)
         if (!tr) return { Q1: 0, Q2: 0, Q3: 0, Q4: 0 }
+        
         return {
-          Q1: tr.qCheckins?.Q1 === 'Completed' ? 100 : 0,
-          Q2: tr.qCheckins?.Q2 === 'Completed' ? 100 : 0,
-          Q3: tr.qCheckins?.Q3 === 'Completed' ? 100 : 0,
-          Q4: tr.qCheckins?.Q4 === 'Completed' ? 100 : 0
+          Q1: parseScore(tr.qCheckins?.Q1),
+          Q2: parseScore(tr.qCheckins?.Q2),
+          Q3: parseScore(tr.qCheckins?.Q3),
+          Q4: parseScore(tr.qCheckins?.Q4)
         }
       }
-      
+
       // Default Team Level averages
       if (trackerData.length === 0) return { Q1: 0, Q2: 0, Q3: 0, Q4: 0 }
-      const q1 = Math.round((trackerData.filter(t => t.qCheckins?.Q1 === 'Completed').length / trackerData.length) * 100) || 0
-      const q2 = Math.round((trackerData.filter(t => t.qCheckins?.Q2 === 'Completed').length / trackerData.length) * 100) || 0
-      const q3 = Math.round((trackerData.filter(t => t.qCheckins?.Q3 === 'Completed').length / trackerData.length) * 100) || 0
-      const q4 = Math.round((trackerData.filter(t => t.qCheckins?.Q4 === 'Completed').length / trackerData.length) * 100) || 0
-      return { Q1: q1, Q2: q2, Q3: q3, Q4: q4 }
+      
+      const getTeamAvg = (qKey) => {
+        const sum = trackerData.reduce((acc, t) => acc + parseScore(t.qCheckins?.[qKey]), 0)
+        return Math.round(sum / trackerData.length) || 0
+      }
+
+      return {
+        Q1: getTeamAvg('Q1'),
+        Q2: getTeamAvg('Q2'),
+        Q3: getTeamAvg('Q3'),
+        Q4: getTeamAvg('Q4')
+      }
     }
 
     const activeTrend = getLevelsStats()
@@ -499,8 +541,8 @@ export default function DashboardOverview() {
             {/* ─── Replicated Summary Cards Grid ─── */}
             <div className="admin-summary-grid">
               {[
-                { label: 'Team members',       value: directReports.length, sub: 'registered direct reports' },
-                { label: 'Performance cycle',      value: cycle.name, sub: 'active window goal setting', wide: true }
+                { label: 'Team members', value: directReports.length, sub: 'registered direct reports' },
+                { label: 'Performance cycle', value: cycle.name, sub: 'active window goal setting', wide: true }
               ].map(c => (
                 <div className="admin-stat-card" key={c.label}>
                   <div className="stat-label">{c.label}</div>
@@ -511,7 +553,7 @@ export default function DashboardOverview() {
                 </div>
               ))}
             </div>
- 
+
 
 
             {/* ─── Team QoQ Trend Area Chart & KPI Breakdown ─── */}
@@ -540,28 +582,28 @@ export default function DashboardOverview() {
                   <svg viewBox="0 0 400 150" width="100%" height="100%" style={{ overflow: 'visible' }}>
                     <defs>
                       <linearGradient id="teamQoqGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#818cf8" stopOpacity="0.4"/>
-                        <stop offset="100%" stopColor="#c7d2fe" stopOpacity="0.05"/>
+                        <stop offset="0%" stopColor="#818cf8" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#c7d2fe" stopOpacity="0.05" />
                       </linearGradient>
                     </defs>
-                    
+
                     <line x1="50" y1="30" x2="350" y2="30" stroke="#21262d" strokeWidth="1" />
                     <line x1="50" y1="75" x2="350" y2="75" stroke="#21262d" strokeWidth="1" />
                     <line x1="50" y1="120" x2="350" y2="120" stroke="#30363d" strokeWidth="1.5" />
-                    
+
                     <path d={closedPath} fill="url(#teamQoqGrad)" />
                     <path d={smoothPath} fill="none" stroke="#58a6ff" strokeWidth="3" />
-                    
+
                     <circle cx="50" cy={y1} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
                     <circle cx="150" cy={y2} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
                     <circle cx="250" cy={y3} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
                     <circle cx="350" cy={y4} r="5" fill="#1f6feb" stroke="#161b22" strokeWidth="2" />
- 
+
                     <text x="50" y={y1 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ1.toFixed(0)}%</text>
                     <text x="150" y={y2 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ2.toFixed(0)}%</text>
                     <text x="250" y={y3 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ3.toFixed(0)}%</text>
                     <text x="350" y={y4 - 10} textAnchor="middle" fontSize="9" fill="#f0f6fc" fontWeight="bold">{scoreQ4.toFixed(0)}%</text>
-                    
+
                     <text x="50" y="142" textAnchor="middle" fontSize="10" fill="#8b949e" fontWeight="bold">Q1</text>
                     <text x="150" y="142" textAnchor="middle" fontSize="10" fill="#8b949e" fontWeight="bold">Q2</text>
                     <text x="250" y="142" textAnchor="middle" fontSize="10" fill="#8b949e" fontWeight="bold">Q3</text>
@@ -572,9 +614,9 @@ export default function DashboardOverview() {
             </div>
 
             {/* ─── Team Real-Time Completion Tracker Grid ─── */}
-            <div 
-              className="interactive-section-card" 
-              style={{ marginTop: '1.5rem' }} 
+            <div
+              className="interactive-section-card"
+              style={{ marginTop: '1.5rem' }}
               onClick={() => setIsTeamTrackerModalOpen(true)}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
@@ -582,7 +624,7 @@ export default function DashboardOverview() {
                   <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>⚡ Team Real-Time Tracker</h3>
                   <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: 2 }}>Track direct reports goal settings and quarterly check-ins.</div>
                 </div>
-                
+
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   {[
@@ -625,7 +667,7 @@ export default function DashboardOverview() {
                       <tr><td colSpan="4" style={{ textAlign: 'center', color: '#9ca3af' }}>No employees registered in your roster.</td></tr>
                     ) : trackerData.slice(0, 5).map(row => {
                       const checkinStatus = row.qCheckins[trackerTab] || 'Pending'
-                      
+
                       return (
                         <tr key={row.id}>
                           <td style={{ fontWeight: 600 }}>{row.name}</td>
@@ -647,7 +689,7 @@ export default function DashboardOverview() {
                 </table>
                 {trackerData.length > 5 && (
                   <div style={{ textAlign: 'center', marginTop: '1rem', paddingBottom: '0.5rem' }}>
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); setIsTeamTrackerModalOpen(true); }}
                       className="btn-sm btn-ghost-sm"
                       style={{ fontWeight: 700 }}
@@ -730,12 +772,12 @@ export default function DashboardOverview() {
                       <tbody>
                         {trackerData
                           .filter(row => {
-                            const nameMatch = row.name.toLowerCase().includes(teamTrackerSearch.toLowerCase()) || 
-                                             row.email.toLowerCase().includes(teamTrackerSearch.toLowerCase())
+                            const nameMatch = row.name.toLowerCase().includes(teamTrackerSearch.toLowerCase()) ||
+                              row.email.toLowerCase().includes(teamTrackerSearch.toLowerCase())
                             const checkinStatus = row.qCheckins[trackerTab] || 'Pending'
-                            const statusMatch = teamTrackerFilter === 'all' || 
-                                                (teamTrackerFilter === 'completed' && checkinStatus === 'Completed') ||
-                                                (teamTrackerFilter === 'pending' && checkinStatus === 'Pending')
+                            const statusMatch = teamTrackerFilter === 'all' ||
+                              (teamTrackerFilter === 'completed' && checkinStatus === 'Completed') ||
+                              (teamTrackerFilter === 'pending' && checkinStatus !== 'Completed')
                             return nameMatch && statusMatch
                           })
                           .map(row => {
@@ -765,9 +807,9 @@ export default function DashboardOverview() {
             )}
 
             {/* ── Slide-over Escalation Details Drawer ── */}
-            <div 
-              className={`drawer-overlay ${isEscalationDrawerOpen ? 'open' : ''}`} 
-              onClick={() => setIsEscalationDrawerOpen(false)} 
+            <div
+              className={`drawer-overlay ${isEscalationDrawerOpen ? 'open' : ''}`}
+              onClick={() => setIsEscalationDrawerOpen(false)}
             />
             <div className={`drawer-body ${isEscalationDrawerOpen && selectedEscalation ? 'open' : ''}`}>
               {selectedEscalation && (
@@ -776,7 +818,7 @@ export default function DashboardOverview() {
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span>🚨</span> Escalation Details
                     </h3>
-                    <button 
+                    <button
                       onClick={() => setIsEscalationDrawerOpen(false)}
                       style={{
                         background: '#f3f4f6', border: 'none', borderRadius: '50%',
@@ -787,7 +829,7 @@ export default function DashboardOverview() {
                       ✕
                     </button>
                   </div>
-                  
+
                   <div className="drawer-content" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {/* Badge/Level card */}
                     <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 12, padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -840,14 +882,14 @@ export default function DashboardOverview() {
                   </div>
 
                   <div className="drawer-footer" style={{ display: 'flex', gap: '0.75rem' }}>
-                    <a 
+                    <a
                       href={`mailto:${selectedEscalation.employee?.email || ''}?subject=Urgent: Goal setting / check-in cycle overdue escalation`}
                       className="btn-sm btn-primary-sm"
                       style={{ flex: 1, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', fontWeight: 700 }}
                     >
                       ✉️ Email Employee
                     </a>
-                    <button 
+                    <button
                       onClick={() => setIsEscalationDrawerOpen(false)}
                       className="btn-sm btn-ghost-sm"
                       style={{ flex: 1, fontWeight: 700 }}
@@ -876,7 +918,7 @@ export default function DashboardOverview() {
         <h1 className="user-page-title">Welcome back, {me.name}!</h1>
         <p className="user-page-subtitle">Here is an overview of your active performance cycle.</p>
       </div>
-      
+
       {cycle ? (
         <div className="user-card" style={{ maxWidth: 500 }}>
           <h2 className="user-card-title">Active Cycle: {cycle.name}</h2>

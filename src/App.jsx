@@ -19,7 +19,6 @@ import ManageUsers from './pages/admin/ManageUsers'
 import ThrustAreas from './pages/admin/ThrustAreas'
 import ManageCycles from './pages/admin/ManageCycles'
 import AuditLog from './pages/admin/AuditLog'
-import AdminSettings from './pages/admin/AdminSettings'
 import GoalUnlock from './pages/admin/GoalUnlock'
 import Escalations from './pages/admin/Escalations'
 
@@ -103,7 +102,6 @@ export default function App() {
           <Route path="/admin/thrust-areas" element={<AdminRoute><ThrustAreas /></AdminRoute>} />
           <Route path="/admin/cycles" element={<AdminRoute><ManageCycles /></AdminRoute>} />
           <Route path="/admin/audit-log" element={<AdminRoute><AuditLog /></AdminRoute>} />
-          <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
           <Route path="/admin/goal-unlock" element={<AdminRoute><GoalUnlock /></AdminRoute>} />
           <Route path="/admin/escalations" element={<AdminRoute><Escalations /></AdminRoute>} />
           <Route path="/admin/reports" element={<AdminRoute><AdminLayout><Reports /></AdminLayout></AdminRoute>} />

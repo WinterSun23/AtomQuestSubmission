@@ -38,6 +38,9 @@ async function runEscalations(supabase) {
     const deadline = deadlineVal ? parseInt(deadlineVal, 10) : 7
     const unit = settings?.find(s => s.key === 'escalation_deadline_unit')?.value || 'days'
     
+    // Fetch first admin for L3/HR escalations
+    const { data: admin } = await supabase.from('users').select('id, email, name').eq('role', 'admin').limit(1).maybeSingle()
+
     // 1. Fetch active cycle
     const { data: cycles } = await supabase.from('cycles').select('*').eq('is_active', true).maybeSingle()
     if (!cycles) {
@@ -70,15 +73,38 @@ async function runEscalations(supabase) {
       for (const user of users) {
         const sheet = sheets?.find(s => s.employee_id === user.id)
         if (!sheet || sheet.status === 'draft') {
+          let escalationLevel = '1'
+          let notifiedUserId = user.id
+          let emailTo = user.email
+          let message = `Employee ${user.name} has not submitted their goal sheet for ${cycles.name}`
+          let emailBody = `Your goal setting window opened more than ${deadline} ${unit} ago. Please submit your goals for approval. Link: /dashboard/my-goals`
+          
+          if (diff > 3 * deadline && admin) {
+            escalationLevel = '3'
+            notifiedUserId = admin.id
+            emailTo = admin.email
+            message = `[L3 Escalation] Employee ${user.name} has still not submitted their goal sheet after ${3 * deadline} ${unit}`
+            emailBody = `Notice: Employee ${user.name} goal sheet setting remains overdue after ${3 * deadline} ${unit}. Action is required at HR/Admin level. Link: /admin/escalations`
+          } else if (diff > 2 * deadline && user.manager_id) {
+            const { data: manager } = await supabase.from('users').select('id, email, name').eq('id', user.manager_id).single()
+            if (manager) {
+              escalationLevel = '2'
+              notifiedUserId = manager.id
+              emailTo = manager.email
+              message = `[L2 Escalation] Employee ${user.name} has not submitted their goal sheet after ${2 * deadline} ${unit}`
+              emailBody = `Notice: Your direct report ${user.name} has not submitted their goals for approval for ${cycles.name} after ${2 * deadline} ${unit}. Link: /dashboard/team-goals`
+            }
+          }
+
           await triggerEscalation(supabase, {
             employeeId: user.id,
             ruleId: 'E1',
-            escalationLevel: '1',
-            notifiedUserId: user.id,
-            message: `Employee ${user.name} has not submitted their goal sheet for ${cycles.name}`,
-            emailTo: user.email,
-            emailSubject: 'Action Required: Submit Your Goal Sheet',
-            emailBody: `Your goal setting window opened more than ${deadline} ${unit} ago. Please submit your goals for approval. Link: /dashboard/my-goals`
+            escalationLevel,
+            notifiedUserId,
+            message,
+            emailTo,
+            emailSubject: escalationLevel === '1' ? 'Action Required: Submit Your Goal Sheet' : `Escalation Notice Level ${escalationLevel}: Goal Sheet Overdue`,
+            emailBody
           })
         }
       }
@@ -98,15 +124,29 @@ async function runEscalations(supabase) {
           // Get manager details
           const { data: manager } = await supabase.from('users').select('id, email, name').eq('id', sheet.users.manager_id).single()
           if (manager) {
+            let escalationLevel = '1'
+            let notifiedUserId = manager.id
+            let emailTo = manager.email
+            let message = `Manager ${manager.name} has pending goal approvals older than ${deadline} ${unit} for ${sheet.users.name}`
+            let emailBody = `You have pending goal sheet submissions from ${sheet.users.name} that are over ${deadline} ${unit} old. Link: /dashboard/team-goals`
+
+            if (subDiff > 2 * deadline && admin) {
+              escalationLevel = '2'
+              notifiedUserId = admin.id
+              emailTo = admin.email
+              message = `[L2 Escalation] Manager ${manager.name} has still not approved goal sheets for ${sheet.users.name} after ${2 * deadline} ${unit}`
+              emailBody = `Notice: Manager ${manager.name} has not approved goal sheets for ${sheet.users.name} after ${2 * deadline} ${unit}. Link: /admin/escalations`
+            }
+
             await triggerEscalation(supabase, {
               employeeId: sheet.users.id,
               ruleId: 'E2',
-              escalationLevel: '1',
-              notifiedUserId: manager.id,
-              message: `Manager ${manager.name} has pending goal approvals older than ${deadline} ${unit} for ${sheet.users.name}`,
-              emailTo: manager.email,
-              emailSubject: 'Action Required: Approve Goal Sheets',
-              emailBody: `You have pending goal sheet submissions from ${sheet.users.name} that are over ${deadline} ${unit} old. Link: /dashboard/team-goals`
+              escalationLevel,
+              notifiedUserId,
+              message,
+              emailTo,
+              emailSubject: escalationLevel === '1' ? 'Action Required: Approve Goal Sheets' : `Escalation Notice Level ${escalationLevel}: Pending Approvals Overdue`,
+              emailBody
             })
           }
         }
@@ -124,7 +164,7 @@ async function runEscalations(supabase) {
         if (winDiff > deadline) {
           // Find employees with approved goal sheets
           const { data: approvedSheets } = await supabase.from('goal_sheets')
-            .select('employee_id, users!goal_sheets_employee_id_users_id_fk(id, name, email)')
+            .select('employee_id, users!goal_sheets_employee_id_users_id_fk(id, name, email, manager_id)')
             .eq('status', 'approved')
             .eq('cycle_id', cycles.id)
           
@@ -148,15 +188,38 @@ async function runEscalations(supabase) {
               }
               
               if (!hasCheckins) {
+                let escalationLevel = '1'
+                let notifiedUserId = sheet.users.id
+                let emailTo = sheet.users.email
+                let message = `Employee ${sheet.users.name} has not completed check-ins for ${w.quarter}`
+                let emailBody = `The check-in window for ${w.quarter} opened more than ${deadline} ${unit} ago. Please update your achievements. Link: /dashboard/my-checkins`
+
+                if (winDiff > 3 * deadline && admin) {
+                  escalationLevel = '3'
+                  notifiedUserId = admin.id
+                  emailTo = admin.email
+                  message = `[L3 Escalation] Employee ${sheet.users.name} has still not completed check-ins for ${w.quarter} after ${3 * deadline} ${unit}`
+                  emailBody = `Notice: Employee ${sheet.users.name} check-in remains overdue after ${3 * deadline} ${unit}. Action is required at HR/Admin level. Link: /admin/escalations`
+                } else if (winDiff > 2 * deadline && sheet.users.manager_id) {
+                  const { data: manager } = await supabase.from('users').select('id, email, name').eq('id', sheet.users.manager_id).single()
+                  if (manager) {
+                    escalationLevel = '2'
+                    notifiedUserId = manager.id
+                    emailTo = manager.email
+                    message = `[L2 Escalation] Employee ${sheet.users.name} has not completed check-ins for ${w.quarter} after ${2 * deadline} ${unit}`
+                    emailBody = `Notice: Your direct report ${sheet.users.name} check-in is overdue for ${w.quarter} after ${2 * deadline} ${unit}. Link: /dashboard/team-goals`
+                  }
+                }
+
                 await triggerEscalation(supabase, {
                   employeeId: sheet.users.id,
                   ruleId: 'E3',
-                  escalationLevel: '1',
-                  notifiedUserId: sheet.users.id,
-                  message: `Employee ${sheet.users.name} has not completed check-ins for ${w.quarter}`,
-                  emailTo: sheet.users.email,
-                  emailSubject: `Action Required: Complete ${w.quarter} Check-ins`,
-                  emailBody: `The check-in window for ${w.quarter} opened more than ${deadline} ${unit} ago. Please update your achievements. Link: /dashboard/my-checkins`
+                  escalationLevel,
+                  notifiedUserId,
+                  message,
+                  emailTo,
+                  emailSubject: escalationLevel === '1' ? `Action Required: Complete ${w.quarter} Check-ins` : `Escalation Notice Level ${escalationLevel}: Check-ins Overdue`,
+                  emailBody
                 })
               }
             }
@@ -219,15 +282,29 @@ async function runEscalations(supabase) {
                   .single()
                 
                 if (manager) {
+                  let escalationLevel = '1'
+                  let notifiedUserId = manager.id
+                  let emailTo = manager.email
+                  let message = `Manager ${manager.name} has overdue check-in reviews for ${info.user.name} (${w.quarter})`
+                  let emailBody = `You have pending check-in reviews for ${info.user.name} in ${w.quarter} that are over ${deadline} ${unit} old. Link: /dashboard/team-checkins`
+
+                  if (checkinDiff > 2 * deadline && admin) {
+                    escalationLevel = '2'
+                    notifiedUserId = admin.id
+                    emailTo = admin.email
+                    message = `[L2 Escalation] Manager ${manager.name} has still not reviewed check-ins for ${info.user.name} (${w.quarter}) after ${2 * deadline} ${unit}`
+                    emailBody = `Notice: Manager ${manager.name} has pending check-in reviews for ${info.user.name} in ${w.quarter} that are over ${2 * deadline} ${unit} old. Link: /admin/escalations`
+                  }
+
                   await triggerEscalation(supabase, {
                     employeeId: empId,
                     ruleId: 'E4',
-                    escalationLevel: '1',
-                    notifiedUserId: manager.id,
-                    message: `Manager ${manager.name} has overdue check-in reviews for ${info.user.name} (${w.quarter})`,
-                    emailTo: manager.email,
-                    emailSubject: 'Action Required: Complete Check-in Review',
-                    emailBody: `You have pending check-in reviews for ${info.user.name} in ${w.quarter} that are over ${deadline} ${unit} old. Link: /dashboard/team-checkins`
+                    escalationLevel,
+                    notifiedUserId,
+                    message,
+                    emailTo,
+                    emailSubject: escalationLevel === '1' ? 'Action Required: Complete Check-in Review' : `Escalation Notice Level ${escalationLevel}: Check-in Reviews Overdue`,
+                    emailBody
                   })
                 }
               }

@@ -31,12 +31,6 @@ const NAV = [
       { id: 'escalations', label: 'Escalations',   icon: '🚨', path: '/admin/escalations' },
       { id: 'audit',       label: 'Audit Log',     icon: '📋', path: '/admin/audit-log' },
     ],
-  },
-  {
-    section: 'Config',
-    items: [
-      { id: 'settings',    label: 'Settings',       icon: '⚙️',  path: '/admin/settings' },
-    ],
   }
 ]
 
