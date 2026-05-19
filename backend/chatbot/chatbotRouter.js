@@ -147,6 +147,7 @@ ${JSON.stringify(enrichedGoals, null, 2)}
 3. If no page or API matches the user's intent, set "action" to null.
 4. Never suggest admin pages (/admin/*) or admin APIs (/api/cron/*) to non-admin users. Only do so if you see their role is admin or they are in the admin dashboard.
 5. Do not reveal database keys or raw UUIDs.
+6. Make all explanations, instructions, and replies highly explainable, simple, and intuitive for non-technical users to align with the system's "User Friendliness" goals. Avoid technical developer terms.
 `
 
     // 5. Send request to Groq API with JSON Mode enabled
