@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { signOut } from '../lib/auth'
 import { useApp } from '../lib/AppContext'
 import './AdminLayout.css'
+import Chatbot from '../components/chatbot/Chatbot'
 
 const NAV = [
   {
@@ -47,50 +48,53 @@ export default function AdminLayout({ children, openEscalations = 0 }) {
   if (loading) return null
 
   return (
-    <div className="admin-shell">
-      {/* ── Top bar ── */}
-      <header className="admin-topbar">
-        <a className="admin-topbar-logo" href="/admin">
-          🎯 GoalFlow <span className="admin-topbar-badge">ADMIN</span>
-        </a>
-        <div className="admin-topbar-right">
-          <button className="admin-topbar-signout" onClick={() => navigate('/dashboard')} style={{ marginRight: '10px', background: '#f3f4f6' }}>
-            🏠 Switch to Portal
-          </button>
-          <span className="admin-topbar-user">{me?.name || me?.email?.split('@')[0]}</span>
-          <button className="admin-topbar-signout" onClick={handleSignOut}>
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      {/* ── Sidebar ── */}
-      <nav className="admin-sidebar">
-        {NAV.map(group => (
-          <div key={group.section}>
-            <div className="admin-nav-section">{group.section}</div>
-            {group.items.map(item => (
-              <button
-                key={item.id}
-                id={`admin-nav-${item.id}`}
-                className={`admin-nav-link ${location.pathname === item.path ? 'active' : ''}`}
-                onClick={() => navigate(item.path)}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
-                {item.id === 'escalations' && openEscalations > 0 && (
-                  <span className="nav-badge">{openEscalations}</span>
-                )}
-              </button>
-            ))}
+    <>
+      <div className="admin-shell">
+        {/* ── Top bar ── */}
+        <header className="admin-topbar">
+          <a className="admin-topbar-logo" href="/admin">
+            🎯 GoalFlow <span className="admin-topbar-badge">ADMIN</span>
+          </a>
+          <div className="admin-topbar-right">
+            <button className="admin-topbar-signout" onClick={() => navigate('/dashboard')} style={{ marginRight: '10px', background: '#f3f4f6' }}>
+              🏠 Switch to Portal
+            </button>
+            <span className="admin-topbar-user">{me?.name || me?.email?.split('@')[0]}</span>
+            <button className="admin-topbar-signout" onClick={handleSignOut}>
+              Sign out
+            </button>
           </div>
-        ))}
-      </nav>
+        </header>
 
-      {/* ── Page content ── */}
-      <main className="admin-main">
-        {children}
-      </main>
-    </div>
+        {/* ── Sidebar ── */}
+        <nav className="admin-sidebar">
+          {NAV.map(group => (
+            <div key={group.section}>
+              <div className="admin-nav-section">{group.section}</div>
+              {group.items.map(item => (
+                <button
+                  key={item.id}
+                  id={`admin-nav-${item.id}`}
+                  className={`admin-nav-link ${location.pathname === item.path ? 'active' : ''}`}
+                  onClick={() => navigate(item.path)}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  {item.label}
+                  {item.id === 'escalations' && openEscalations > 0 && (
+                    <span className="nav-badge">{openEscalations}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        {/* ── Page content ── */}
+        <main className="admin-main">
+          {children}
+        </main>
+      </div>
+      <Chatbot />
+    </>
   )
 }

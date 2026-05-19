@@ -744,6 +744,9 @@ app.post('/api/cron/trigger', async (req, res) => {
   res.json({ success: true, message: 'Cron job executed' })
 })
 
+// Chatbot route
+app.use('/api/chatbot', require('./chatbot/chatbotRouter'))
+
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`)
