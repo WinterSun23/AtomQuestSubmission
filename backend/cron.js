@@ -48,6 +48,9 @@ async function runEscalations(supabase) {
     // Helper to calculate difference
     const getDiff = (date1, date2) => {
       const ms = date1 - date2
+      if (unit === 'minutes') {
+        return Math.floor(ms / (1000 * 60))
+      }
       if (unit === 'hours') {
         return Math.floor(ms / (1000 * 60 * 60))
       }

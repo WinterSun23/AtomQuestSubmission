@@ -164,6 +164,22 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleSaveSetting(key, newValue) {
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .update({ value: String(newValue) })
+        .eq('key', key)
+      
+      if (error) throw error
+      
+      setSettingsList(prev => prev.map(s => s.key === key ? { ...s, value: String(newValue) } : s))
+      alert(`Successfully saved parameter: ${key} = ${newValue}`)
+    } catch (err) {
+      alert(`Error saving parameter: ${err.message}`)
+    }
+  }
+
   // Calculate QoQ Trend dynamically based on filter
   // This calculates the average actual *achievement score* across all goals
   const getTrendStats = () => {
@@ -479,22 +495,72 @@ export default function AdminDashboard() {
               </div>
             )}
             
-            <h4 style={{ margin: '1.5rem 0 1rem 0', fontSize: '1rem', fontWeight: 700 }}>⚙️ Active Scheduler Parameters</h4>
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+            <h4 style={{ margin: '1.5rem 0 1rem 0', fontSize: '1rem', fontWeight: 700, color: '#f0f6fc' }}>⚙️ Active Scheduler Parameters</h4>
+            <div style={{ border: '1px solid #30363d', borderRadius: 8, overflow: 'hidden', background: '#0d1117' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    <th style={{ padding: '0.75rem 1rem' }}>Setting Key</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Active Value</th>
+                  <tr style={{ background: '#161b22', borderBottom: '1px solid #30363d', color: '#8b949e' }}>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>Setting Key</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>Description</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 700, width: '320px' }}>Active Config Value</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {settingsList.map(s => (
-                    <tr key={s.key} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#4f46e5' }}>{s.key}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#111827' }}>{s.value}</td>
-                    </tr>
-                  ))}
+                  {settingsList.map(s => {
+                    const isBool = s.value === 'true' || s.value === 'false'
+                    const isUnit = s.key === 'escalation_deadline_unit'
+                    
+                    return (
+                      <tr key={s.key} style={{ borderBottom: '1px solid #21262d' }}>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#58a6ff' }}>{s.key}</td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#8b949e' }}>{s.description || 'App configuration value'}</td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {isUnit ? (
+                              <select 
+                                defaultValue={s.value} 
+                                id={`input_${s.key}`}
+                                className="admin-select"
+                                style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', background: '#161b22', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: 6, flexGrow: 1 }}
+                              >
+                                <option value="days">📅 Days</option>
+                                <option value="hours">⏰ Hours</option>
+                                <option value="minutes">⚡ Minutes</option>
+                              </select>
+                            ) : isBool ? (
+                              <select 
+                                defaultValue={s.value} 
+                                id={`input_${s.key}`}
+                                className="admin-select"
+                                style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', background: '#161b22', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: 6, flexGrow: 1 }}
+                              >
+                                <option value="true">✅ True / Enabled</option>
+                                <option value="false">❌ False / Disabled</option>
+                              </select>
+                            ) : (
+                              <input 
+                                type="text"
+                                defaultValue={s.value}
+                                id={`input_${s.key}`}
+                                style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem', background: '#161b22', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: 6, flexGrow: 1 }}
+                              />
+                            )}
+                            <button 
+                              onClick={() => {
+                                const val = document.getElementById(`input_${s.key}`).value
+                                handleSaveSetting(s.key, val)
+                              }}
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 600, background: '#1f6feb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', transition: 'background 0.2s' }}
+                              onMouseOver={e => e.currentTarget.style.background = '#388bfd'}
+                              onMouseOut={e => e.currentTarget.style.background = '#1f6feb'}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

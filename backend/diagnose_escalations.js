@@ -120,6 +120,9 @@ async function main() {
 
   const getDiff = (d1, d2) => {
     const ms = d1 - d2
+    if (unit === 'minutes') {
+      return Math.floor(ms / (1000 * 60))
+    }
     return unit === 'hours'
       ? Math.floor(ms / (1000 * 60 * 60))
       : Math.floor(ms / (1000 * 60 * 60 * 24))
