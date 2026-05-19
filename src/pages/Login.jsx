@@ -12,9 +12,9 @@ import './Login.css'
 function MicrosoftLogo() {
   return (
     <svg width="18" height="18" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1"  y="1"  width="9" height="9" fill="#f25022" />
-      <rect x="11" y="1"  width="9" height="9" fill="#7fba00" />
-      <rect x="1"  y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
       <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
     </svg>
   )
@@ -26,16 +26,16 @@ const VIEWS = { LOGIN: 'login', SIGNUP: 'signup', FORGOT: 'forgot' }
 export default function Login() {
   const navigate = useNavigate()
 
-  const [view,     setView]     = useState(VIEWS.LOGIN)
-  const [loading,  setLoading]  = useState(false)
+  const [view, setView] = useState(VIEWS.LOGIN)
+  const [loading, setLoading] = useState(false)
   const [msLoading, setMsLoading] = useState(false)
-  const [error,    setError]    = useState('')
-  const [success,  setSuccess]  = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   // Form fields
-  const [email,    setEmail]    = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name,     setName]     = useState('')
+  const [name, setName] = useState('')
 
   function clearMessages() { setError(''); setSuccess('') }
 
@@ -110,6 +110,8 @@ export default function Login() {
 
   // ── Shared Microsoft button (shown in login + signup) ──────────────────────
   function MicrosoftButton() {
+    return null; // Hidden from UI as it doesn't work currently
+
     return (
       <>
         <div className="auth-divider">or continue with</div>
@@ -173,7 +175,7 @@ export default function Login() {
                 Enter your work email and we'll send a reset link.
               </p>
 
-              {error   && <div className="auth-error"   role="alert">{error}</div>}
+              {error && <div className="auth-error" role="alert">{error}</div>}
               {success && <div className="auth-success" role="status">{success}</div>}
 
               <form onSubmit={handleForgot} noValidate>
@@ -244,7 +246,7 @@ export default function Login() {
                 </button>
               </div>
 
-              {error   && <div className="auth-error"   role="alert">{error}</div>}
+              {error && <div className="auth-error" role="alert">{error}</div>}
               {success && <div className="auth-success" role="status">{success}</div>}
 
               {/* ── Login form ── */}
