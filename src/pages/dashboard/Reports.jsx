@@ -17,6 +17,7 @@ export default function Reports() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedThrust, setSelectedThrust] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     loadReports()
@@ -97,7 +98,7 @@ export default function Reports() {
           id, employee_id, status,
           goals (
             id, title, thrust_area_id, thrust_areas(name), uom_type, target, target_date, weightage,
-            check_ins (actual_achievement, actual_date, status, computed_score, window_id, manager_comment)
+            check_ins (actual_achievement, actual_date, status, computed_score, window_id, manager_comment, check_in_windows(window_open))
           )
         `)
         .in('employee_id', uids)
@@ -116,6 +117,9 @@ export default function Reports() {
           let targetCheckins = g.check_ins || []
           if (winId) {
             targetCheckins = targetCheckins.filter(c => c.window_id === winId)
+          } else {
+            // Sort by latest check-in window open date to align exactly with DB entries
+            targetCheckins.sort((a, b) => new Date(b.check_in_windows?.window_open || 0) - new Date(a.check_in_windows?.window_open || 0))
           }
           const checkin = targetCheckins[0] || {}
           const score = checkin.computed_score || 0
@@ -191,11 +195,11 @@ export default function Reports() {
   // Extract unique thrust areas dynamically from current liveData
   const uniqueThrustAreas = Array.from(new Set(liveData.map(r => r.thrustArea).filter(t => t !== '-')))
 
-  // Calculate metrics
-  const uniqueEmployees = Array.from(new Set(filteredPreview.map(r => r.employeeId))).length
-  const totalGoals = filteredPreview.length
-  const avgScore = totalGoals > 0 ? (filteredPreview.reduce((sum, r) => sum + r.score, 0) / totalGoals) : 0
-  const avgWeightedScore = totalGoals > 0 ? (filteredPreview.reduce((sum, r) => sum + r.weightedScore, 0) / totalGoals) : 0
+  // Calculate metrics based on the full unfiltered DB scope to ensure they remain static and accurate to DB entries
+  const uniqueEmployees = Array.from(new Set(liveData.map(r => r.employeeId))).length
+  const totalGoals = liveData.length
+  const avgScore = totalGoals > 0 ? (liveData.reduce((sum, r) => sum + r.score, 0) / totalGoals) : 0
+  const avgWeightedScore = totalGoals > 0 ? (liveData.reduce((sum, r) => sum + r.weightedScore, 0) / totalGoals) : 0
 
   return (
     <div>
@@ -305,8 +309,8 @@ export default function Reports() {
       {/* ── Compiled Telemetry Live Preview ── */}
       <div className="user-card" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 className="user-card-title" style={{ margin: 0 }}>📊 Compiled Telemetry Live Preview</h2>
-          <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>Showing {filteredPreview.length} goal items</span>
+          <h2 className="user-card-title" style={{ margin: 0 }}>📊 Compiled Telemetry Live Preview (Mini-View)</h2>
+          <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>Showing up to 5 of {filteredPreview.length} goal items</span>
         </div>
 
         {loadingPreview ? (
@@ -318,50 +322,196 @@ export default function Reports() {
         ) : filteredPreview.length === 0 ? (
           <div className="user-empty">No performance data matching the selected scopes.</div>
         ) : (
-          <div className="user-table-wrap">
-            <table className="user-table">
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Goal Title</th>
-                  <th>Thrust Area</th>
-                  <th>UoM</th>
-                  <th>Target</th>
-                  <th>Actual Progress</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Weight</th>
-                  <th style={{ textAlign: 'right' }}>Score</th>
-                  <th style={{ textAlign: 'right' }}>Weighted Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPreview.map((row, idx) => (
-                  <tr key={`${row.goalId}-${idx}`}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#111827' }}>{row.employeeName}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{row.employeeEmail}</div>
-                      <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>{row.department}</div>
-                    </td>
-                    <td style={{ fontSize: '0.85rem', color: '#374151', maxWidth: '280px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{row.goalTitle}</td>
-                    <td style={{ fontSize: '0.8rem', color: '#4b5563' }}>{row.thrustArea}</td>
-                    <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{row.uom}</td>
-                    <td style={{ fontSize: '0.8rem', color: '#4b5563' }}>{row.target}</td>
-                    <td style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>{row.actual}</td>
-                    <td>
-                      <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '12px', background: '#f3f4f6', color: '#4b5563', fontWeight: 600 }}>
-                        {row.checkinStatus}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#4f46e5' }}>{row.weightage}%</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>{row.score.toFixed(1)}%</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#10b981' }}>{row.weightedScore.toFixed(1)}%</td>
+          <div>
+            <div className="user-table-wrap">
+              <table className="user-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Goal Title</th>
+                    <th>Thrust Area</th>
+                    <th>Actual Progress</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Score</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredPreview.slice(0, 5).map((row, idx) => (
+                    <tr key={`${row.goalId}-${idx}`}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#111827' }}>{row.employeeName}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{row.employeeEmail}</div>
+                      </td>
+                      <td style={{ fontSize: '0.85rem', color: '#374151', maxWidth: '280px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{row.goalTitle}</td>
+                      <td style={{ fontSize: '0.8rem', color: '#4b5563' }}>{row.thrustArea}</td>
+                      <td style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>{row.actual}</td>
+                      <td>
+                        <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '12px', background: '#f3f4f6', color: '#4b5563', fontWeight: 600 }}>
+                          {row.checkinStatus}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>{row.score.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredPreview.length > 0 && (
+              <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+                <button
+                  className="btn-sm btn-primary-sm"
+                  onClick={() => setIsModalOpen(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.25rem', fontWeight: 700 }}
+                >
+                  🔍 View Full Telemetry Grid & Details ({filteredPreview.length} goals)
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* ── Glassmorphic Telemetry Full Preview Modal ── */}
+      {isModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          padding: '1.5rem',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '1200px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(226, 232, 240, 0.8)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid #f1f5f9',
+              background: '#f8fafc',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>📊 Performance Telemetry Grid</h3>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Complete list of {filteredPreview.length} goal milestones scoped under current filters.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold',
+                  color: '#64748b',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#e2e8f0'}
+                onMouseOut={(e) => e.target.style.background = '#f1f5f9'}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+              <div className="user-table-wrap" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                <table className="user-table">
+                  <thead>
+                    <tr style={{ position: 'sticky', top: 0, zIndex: 10, background: '#ffffff' }}>
+                      <th>Employee</th>
+                      <th>Goal Title</th>
+                      <th>Thrust Area</th>
+                      <th>UoM</th>
+                      <th>Target</th>
+                      <th>Actual Progress</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Weight</th>
+                      <th style={{ textAlign: 'right' }}>Score</th>
+                      <th style={{ textAlign: 'right' }}>Weighted Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPreview.map((row, idx) => (
+                      <tr key={`${row.goalId}-${idx}`}>
+                        <td>
+                          <div style={{ fontWeight: 600, color: '#111827' }}>{row.employeeName}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{row.employeeEmail}</div>
+                          <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: '2px' }}>{row.department}</div>
+                        </td>
+                        <td style={{ fontSize: '0.85rem', color: '#374151', maxWidth: '280px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{row.goalTitle}</td>
+                        <td style={{ fontSize: '0.8rem', color: '#4b5563' }}>{row.thrustArea}</td>
+                        <td style={{ fontSize: '0.8rem', color: '#6b7280' }}>{row.uom}</td>
+                        <td style={{ fontSize: '0.8rem', color: '#4b5563' }}>{row.target}</td>
+                        <td style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>{row.actual}</td>
+                        <td>
+                          <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '12px', background: '#f3f4f6', color: '#4b5563', fontWeight: 600 }}>
+                            {row.checkinStatus}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#4f46e5' }}>{row.weightage}%</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#111827' }}>{row.score.toFixed(1)}%</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: '#10b981' }}>{row.weightedScore.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              padding: '1rem 1.5rem',
+              borderTop: '1px solid #f1f5f9',
+              background: '#f8fafc',
+              borderBottomLeftRadius: '16px',
+              borderBottomRightRadius: '16px'
+            }}>
+              <button
+                className="btn-sm btn-ghost-sm"
+                onClick={() => setIsModalOpen(false)}
+                style={{ padding: '0.5rem 1.5rem', fontWeight: 700 }}
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: scale(0.95); }
+              to { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      )}
 
       {/* ── Past Reports Logs ── */}
       <div className="user-card">

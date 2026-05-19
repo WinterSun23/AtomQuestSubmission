@@ -48,7 +48,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.check_ins TO authenticated;
 GRANT ALL                             ON public.check_ins TO service_role;
 
 -- ── public.manager_comments ──────────────────────────────────────────────────
-GRANT SELECT, INSERT                  ON public.manager_comments TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE  ON public.manager_comments TO authenticated;
 GRANT ALL                             ON public.manager_comments TO service_role;
 
 -- ── public.audit_log ─────────────────────────────────────────────────────────

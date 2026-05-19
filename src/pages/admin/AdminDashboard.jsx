@@ -21,6 +21,10 @@ export default function AdminDashboard() {
   const [matrixData, setMatrixData] = useState([])
   const [managersStats, setManagersStats] = useState([])
 
+  // Directory State
+  const [directoryTab, setDirectoryTab] = useState('employees')
+  const [directorySearch, setDirectorySearch] = useState('')
+
   // Cron Data
   const [triggering, setTriggering] = useState(false)
   const [triggerMessage, setTriggerMessage] = useState('')
@@ -38,7 +42,7 @@ export default function AdminDashboard() {
           getAdminSummary(),
           supabase.from('goals').select('id, thrust_areas:thrust_area_id(name), uom_type, check_ins(status)'),
           supabase.from('users').select('id, name, role, manager_id'),
-          supabase.from('goal_sheets').select('id, employee_id, status, cycle_id, goals(id, check_ins(window_id, status))'),
+          supabase.from('goal_sheets').select('id, employee_id, status, cycle_id, goals(id, check_ins(window_id, status, computed_score))'),
           supabase.from('app_settings').select('*'),
           supabase.from('check_in_windows').select('id, quarter')
         ])
@@ -227,7 +231,6 @@ export default function AdminDashboard() {
                 <select value={analyticsLevel} onChange={e => setAnalyticsLevel(e.target.value)} className="admin-select" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', background: '#0d1117', border: '1px solid #30363d', color: '#c9d1d9', borderRadius: 8 }}>
                   <option value="org">🏢 Organisation Level</option>
                   {allManagers.map(m => <option key={m.id} value={`team_${m.id}`}>👥 Team: {m.name}</option>)}
-                  {allEmployees.map(e => <option key={e.id} value={`user_${e.id}`}>👤 Employee: {e.name}</option>)}
                 </select>
               </div>
               <div style={{ position: 'relative', height: '180px' }}>
@@ -246,61 +249,216 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Distributions */}
+            {/* Manager Effectiveness */}
             <div className="chart-card">
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 700 }}>🎯 Goal KPI Breakdown</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4b5563', marginBottom: 4 }}>By Thrust Area</div>
-                  {thrustStats.slice(0,2).map(s => (
-                    <div key={s.name} style={{ marginBottom: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}><span>{s.name}</span><strong>{s.percentage.toFixed(0)}%</strong></div>
-                      <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: `${s.percentage}%`, background: '#6366f1' }}/></div>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 700, color: '#f0f6fc' }}>📋 Manager Effectiveness</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {managersStats.length === 0 ? <div className="admin-empty">No manager stats</div> : managersStats.slice(0,4).map(m => (
+                  <div key={m.name} style={{ background: '#0d1117', padding: '0.85rem', borderRadius: 8, border: '1px solid #30363d' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.25rem' }}>
+                      <span style={{ color: '#f0f6fc' }}>{m.name}</span>
+                      <span style={{ color: '#58a6ff' }}>{m.verification}% Verified</span>
                     </div>
-                  ))}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4b5563', marginBottom: 4 }}>By UoM Type</div>
-                  {uomStats.slice(0,2).map(s => (
-                    <div key={s.name} style={{ marginBottom: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}><span>{s.name}</span><strong>{s.percentage.toFixed(0)}%</strong></div>
-                      <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: `${s.percentage}%`, background: '#10b981' }}/></div>
-                    </div>
-                  ))}
-                </div>
+                    <div className="progress-bar-bg" style={{ height: 4, margin: 0 }}><div className="progress-bar-fill" style={{ width: `${m.verification}%`, background: 'linear-gradient(90deg, #58a6ff, #1f6feb)' }} /></div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="analytics-grid">
-            {/* Heatmaps */}
-            <div className="chart-card">
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 700 }}>📍 Org Completion Rates Heatmap</h3>
-              {matrixData.length === 0 ? <div className="admin-empty">No matrix data</div> : matrixData.map(m => (
-                <div key={m.unit} style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <div style={{ width: '120px', fontSize: '0.8rem', fontWeight: 600, color: '#374151', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{m.unit}</div>
-                  <div className="heatmap-grid" style={{ flex: 1 }}>
-                    {[m.q1, m.q2, m.q3, m.q4].map((v, i) => (
-                      <div key={i} className="heatmap-cell" style={{ background: v >= 90 ? '#10b981' : v >= 50 ? '#3b82f6' : '#d1d5db' }}>{v}%</div>
-                    ))}
-                  </div>
+          {/* ── Employee & Manager Completion Compliance Directory ── */}
+          <div className="chart-card" style={{ marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f0f6fc' }}>👥 Completion Compliance Directory</h3>
+                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#8b949e' }}>
+                  Real-time quarter-on-quarter check-in compliance status for all employees and reporting managers.
+                </p>
+              </div>
+
+              {/* Controls */}
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px', padding: '2px' }}>
+                  <button
+                    onClick={() => setDirectoryTab('employees')}
+                    style={{
+                      background: directoryTab === 'employees' ? '#1f6feb' : 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: '#ffffff',
+                      padding: '0.4rem 1rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Employees
+                  </button>
+                  <button
+                    onClick={() => setDirectoryTab('managers')}
+                    style={{
+                      background: directoryTab === 'managers' ? '#1f6feb' : 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: '#ffffff',
+                      padding: '0.4rem 1rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Managers
+                  </button>
                 </div>
-              ))}
+
+                <input
+                  type="text"
+                  placeholder="🔍 Search name..."
+                  value={directorySearch}
+                  onChange={e => setDirectorySearch(e.target.value)}
+                  style={{
+                    background: '#0d1117',
+                    border: '1px solid #30363d',
+                    color: '#c9d1d9',
+                    borderRadius: '8px',
+                    padding: '0.4rem 0.75rem',
+                    fontSize: '0.8rem',
+                    width: '180px'
+                  }}
+                />
+              </div>
             </div>
 
-            {/* Manager Effectiveness */}
-            <div className="chart-card">
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 700 }}>📋 Manager Effectiveness</h3>
-              {managersStats.length === 0 ? <div className="admin-empty">No manager stats</div> : managersStats.slice(0,4).map(m => (
-                <div key={m.name} style={{ background: '#f9fafb', padding: '0.75rem', borderRadius: 8, marginBottom: '0.5rem', border: '1px solid #f3f4f6' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700 }}>
-                    <span style={{ color: '#1f2937' }}>{m.name}</span>
-                    <span style={{ color: '#6366f1' }}>{m.verification}% Verified</span>
+            {directoryTab === 'employees' ? (
+              (() => {
+                const filteredEmployees = allEmployees.filter(emp => {
+                  const manager = allManagers.find(m => m.id === emp.manager_id)
+                  return emp.name.toLowerCase().includes(directorySearch.toLowerCase()) || 
+                    (manager?.name || '').toLowerCase().includes(directorySearch.toLowerCase())
+                })
+
+                return filteredEmployees.length === 0 ? (
+                  <div className="admin-empty" style={{ background: '#0d1117', border: '1px dashed #30363d' }}>No employees found matching the search.</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #30363d', color: '#8b949e' }}>
+                          <th style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>Employee</th>
+                          <th style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>Reporting Manager</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q1</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q2</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q3</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q4</th>
+                          <th style={{ padding: '0.75rem 1rem', fontWeight: 700, textAlign: 'right', width: '200px' }}>Completion Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredEmployees.map(emp => {
+                          const tracker = trackerData.find(t => t.id === emp.id)
+                          const manager = allManagers.find(m => m.id === emp.manager_id)
+                          
+                          const q1 = tracker?.qScores?.Q1
+                          const q2 = tracker?.qScores?.Q2
+                          const q3 = tracker?.qScores?.Q3
+                          const q4 = tracker?.qScores?.Q4
+                          
+                          const completedCount = [q1, q2, q3, q4].filter(q => q !== null).length
+                          const pct = Math.round((completedCount / 4) * 100)
+                          
+                          const badgeStyle = (val) => ({
+                            display: 'inline-block',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            textAlign: 'center',
+                            width: '70px',
+                            background: val !== null ? '#15803d' : '#21262d',
+                            color: val !== null ? '#bbf7d0' : '#8b949e'
+                          })
+
+                          return (
+                            <tr key={emp.id} style={{ borderBottom: '1px solid #21262d', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#1f242c'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                              <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#f0f6fc' }}>{emp.name}</td>
+                              <td style={{ padding: '0.75rem 1rem', color: '#c9d1d9' }}>{manager?.name || 'Unassigned'}</td>
+                              <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                <span style={badgeStyle(q1)}>{q1 !== null ? 'DONE' : 'PENDING'}</span>
+                              </td>
+                              <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                <span style={badgeStyle(q2)}>{q2 !== null ? 'DONE' : 'PENDING'}</span>
+                              </td>
+                              <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                <span style={badgeStyle(q3)}>{q3 !== null ? 'DONE' : 'PENDING'}</span>
+                              </td>
+                              <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                <span style={badgeStyle(q4)}>{q4 !== null ? 'DONE' : 'PENDING'}</span>
+                              </td>
+                              <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                  <span style={{ fontWeight: 700, color: '#58a6ff' }}>{pct}%</span>
+                                  <div style={{ background: '#21262d', borderRadius: '4px', height: '6px', width: '80px', overflow: 'hidden' }}>
+                                    <div style={{ background: 'linear-gradient(90deg, #58a6ff, #1f6feb)', height: '100%', width: `${pct}%` }} />
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="progress-bar-bg" style={{ height: 4 }}><div className="progress-bar-fill" style={{ width: `${m.verification}%` }} /></div>
-                </div>
-              ))}
-            </div>
+                )
+              })()
+            ) : (
+              (() => {
+                const filteredManagers = matrixData.filter(mgr => {
+                  return mgr.name.toLowerCase().includes(directorySearch.toLowerCase())
+                })
+
+                return filteredManagers.length === 0 ? (
+                  <div className="admin-empty" style={{ background: '#0d1117', border: '1px dashed #30363d' }}>No managers found matching the search.</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #30363d', color: '#8b949e' }}>
+                          <th style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>Manager</th>
+                          <th style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>Direct Reports</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q1 Compliance</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q2 Compliance</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q3 Compliance</th>
+                          <th style={{ padding: '0.75rem 0.5rem', fontWeight: 700, textAlign: 'center' }}>Q4 Compliance</th>
+                          <th style={{ padding: '0.75rem 1rem', fontWeight: 700, textAlign: 'right', width: '200px' }}>Effectiveness Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredManagers.map(mgr => (
+                          <tr key={mgr.name} style={{ borderBottom: '1px solid #21262d', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#1f242c'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                            <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#f0f6fc' }}>{mgr.name}</td>
+                            <td style={{ padding: '0.75rem 1rem', color: '#c9d1d9', fontWeight: 600 }}>{mgr.totalSubs} employees</td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#58a6ff', fontWeight: 700 }}>{mgr.q1}%</td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#58a6ff', fontWeight: 700 }}>{mgr.q2}%</td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#58a6ff', fontWeight: 700 }}>{mgr.q3}%</td>
+                            <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#58a6ff', fontWeight: 700 }}>{mgr.q4}%</td>
+                            <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                <span style={{ fontWeight: 700, color: '#a5b4fc' }}>{mgr.verification}%</span>
+                                <div style={{ background: '#21262d', borderRadius: '4px', height: '6px', width: '80px', overflow: 'hidden' }}>
+                                  <div style={{ background: 'linear-gradient(90deg, #a5b4fc, #6366f1)', height: '100%', width: `${mgr.verification}%` }} />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()
+            )}
           </div>
         </>
       ) : (
